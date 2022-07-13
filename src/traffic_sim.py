@@ -105,18 +105,7 @@ for i_episode in range(num_episodes):
       
         step = (step+1) % environ.update_freq
         if step == 0 and args.mode == 'train':
-            if environ.agents_type == 'cluster':
-                all_losses = []
-                for cluster in environ.cluster_algo.M[-1]:
-                    if len(environ.cluster_models.memory_dict[cluster.ID]) > environ.batch_size:
-                        experience = environ.cluster_models.memory_dict[cluster.ID].sample()
-
-                        local_net, target_net, optimizer = environ.cluster_models.model_dict[cluster.ID]
-                        all_losses.append(optimize_model(experience, local_net, target_net, optimizer))
-                        
-                        logger.losses.append(np.mean(all_losses))
-
-            elif environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
+            if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
                 if len(environ.memory)>environ.batch_size:
                     experience = environ.memory.sample()
                     logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer))
@@ -135,12 +124,6 @@ for i_episode in range(num_episodes):
         if environ.eng.get_finished_vehicle_count() > best_veh_count:
             best_veh_count = environ.eng.get_finished_vehicle_count()
             logger.save_models(environ, flag=True)
-            environ.best_epoch = i_episode
-            
-    elif environ.agents_type == 'cluster':
-        if environ.eng.get_average_travel_time() < best_time:
-            best_time = environ.eng.get_average_travel_time()
-            logger.save_clusters(environ)
             environ.best_epoch = i_episode
     
     logger.log_measures(environ)

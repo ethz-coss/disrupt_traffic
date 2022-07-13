@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument("--sim_config", default='../scenarios/2x2/1.config',  type=str, help="the relative path to the simulation config file")
     parser.add_argument("--flow", default='../scenarios/2x2/flow.json',  type=str, help="the relative path to the simulation flow file")
     parser.add_argument("--dist_roads", default=1,  type=int, help="number of roads to be disrupted")
+    parser.add_argument("--detour", default=1,  type=int, help="number of roads to be disrupted")
 
     return parser.parse_args()
 
@@ -90,23 +91,33 @@ def generate_alt_route(source, goal, removed, path, disrupted_roads):
     return alt_routes
 
                   
-                    
-disrupted_roads = random.sample(roads, args.dist_roads)
+disrupted_roads = []
 alt_routes_dict = {}
 
-print(disrupted_roads)
+while len(disrupted_roads) < args.dist_roads:
+    disrupted_roads += random.sample(roads, args.dist_roads-len(disrupted_roads))
 
-with open(args.flow, "r") as flow_file:
-    data = json.load(flow_file)
+    print(disrupted_roads)
+
+    with open(args.flow, "r") as flow_file:
+        data = json.load(flow_file)
 
 
-for road in disrupted_roads:
-    if road in alt_routes_dict.keys():
-        alt_route = alt_routes_dict[road]
-    else:
-        alt_route = generate_alt_route(roads_dict[road][0], roads_dict[road][1], road, [], set(disrupted_roads))
-        alt_routes_dict[road] = alt_route
-    
+    for road in disrupted_roads:
+        if road in alt_routes_dict.keys():
+            alt_route = alt_routes_dict[road]
+        else:
+            alt_route = generate_alt_route(roads_dict[road][0], roads_dict[road][1], road, [], set(disrupted_roads))
+            alt_routes_dict[road] = alt_route
+
+    for road in disrupted_roads:
+        if len(alt_routes_dict[road]) != args.detour:
+            disrupted_roads.remove(road)
+            alt_routes_dict.pop(road)
+
+
+
+        
 for elem in data:
     route = elem["route"]
     for road in disrupted_roads:

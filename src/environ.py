@@ -19,14 +19,10 @@ from hybrid_agent import Hybrid_Agent
 from presslight_agent import Presslight_Agent
 from fixed_agent import Fixed_Agent
 from random_agent import Random_Agent
-from cluster_agent import Cluster_Agent
 from denflow_agent import Denflow_Agent
 
 from policy_agent import DPGN, Policy_Agent
 from intersection import Lane
-
-# import SOStream.sostream
-from clustering import Cluster_Models, Mfd_Clustering
 
 class Environment:
     """
@@ -76,8 +72,6 @@ class Environment:
                 new_agent = Fixed_Agent(self.eng, ID=agent_id)
             elif self.agents_type == 'random':
                 new_agent = Random_Agent(self.eng, ID=agent_id)
-            elif self.agents_type == 'cluster':
-                new_agent = Cluster_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
             elif self.agents_type == 'denflow':
                 new_agent = Denflow_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
             else:

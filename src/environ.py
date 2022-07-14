@@ -103,22 +103,6 @@ class Environment:
             self.local_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
             self.target_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
 
-
-        if args.load_cluster:
-            with open(args.load_cluster + "/clustering.dill", "rb") as f:
-                self.cluster_algo = dill.load(f)
-
-            for cluster in self.cluster_algo.M[-1]:
-                local_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
-                local_net.load_state_dict(torch.load(args.load_cluster + '/cluster_nets/cluster' + str(cluster.ID) + '_q_net.pt'))
-                local_net.eval()
-                target_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
-                target_net.load_state_dict(torch.load(args.load_cluster + '/cluster_nets/cluster' + str(cluster.ID) + '_target_net.pt'))
-                target_net.eval()
-                optimizer = optim.Adam(local_net.parameters(), lr=args.lr, amsgrad=True)
-                self.cluster_models.model_dict.update({cluster.ID  :(local_net, target_net, optimizer)})
-                self.cluster_models.memory_dict.update({cluster.ID  : ReplayMemory(self.n_actions, buffer_size=int(1e5), batch_size=args.batch_size)})
-
         self.optimizer = optim.Adam(self.local_net.parameters(), lr=args.lr, amsgrad=True)
         self.memory = ReplayMemory(self.n_actions, batch_size=args.batch_size)
 

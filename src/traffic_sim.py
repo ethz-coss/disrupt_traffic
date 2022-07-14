@@ -84,12 +84,6 @@ for i_episode in range(num_episodes):
         environ.eng.set_save_replay(open=True)
         print(args.path + "../replay_file.txt")
         environ.eng.set_replay_file(args.path + "../replay_file.txt")
-
-    if args.meta:
-        config_path =  args.sim_config.split('/')[0] + '/' + args.sim_config.split('/')[1] + '/5x5_900_100_3k/scenarios/' + str(i_episode) + "/" + str(i_episode) + ".config"
-        print(config_path)
-        environ.eng = cityflow.Engine(config_path, thread_num=8)
-        
         
     print("episode ", i_episode)
     done = False
@@ -135,13 +129,6 @@ for i_episode in range(num_episodes):
     
     print(logger.reward, environ.eng.get_average_travel_time(), environ.eng.get_finished_vehicle_count())
 
-    if environ.agents_type == 'cluster':
-        print(len(environ.cluster_algo.M[-1]))
-        if len([len(x) for x in environ.cluster_models.memory_dict.values()]) < 10:
-            print([len(x) for x in environ.cluster_models.memory_dict.values()])
-
-if environ.agents_type != 'cluster':
-    logger.save_models(environ, flag=None)
         
 logger.save_log_file(environ)
 logger.serialise_data(environ)

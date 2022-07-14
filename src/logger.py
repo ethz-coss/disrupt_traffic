@@ -27,7 +27,7 @@ class Logger:
 
         self.reward = 0
 
-        self.log_path = args.path + "/" + args.sim_config.split('/')[2] +'_' + 'config' + '_' + str(args.agents_type)
+        self.log_path = args.path
 
         if args.load != None or args.load_cluster != None:
             self.log_path += "_load"
@@ -38,12 +38,12 @@ class Logger:
 
         if args.ID:
             self.log_path = self.log_path + '(' + str(args.ID) + ')'
-        else:
-            while os.path.exists(self.log_path):
-                self.log_path = old_path + "(" + str(i) + ")"
-                i += 1
+        # else:
+        #     while os.path.exists(self.log_path):
+        #         self.log_path = old_path + "(" + str(i) + ")"
+        #         i += 1
 
-        os.mkdir(self.log_path)
+        # os.mkdir(self.log_path)
 
 
     def log_measures(self, environ):

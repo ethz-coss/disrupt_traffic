@@ -38,12 +38,12 @@ class Logger:
 
         if args.ID:
             self.log_path = self.log_path + '(' + str(args.ID) + ')'
-        # else:
-        #     while os.path.exists(self.log_path):
-        #         self.log_path = old_path + "(" + str(i) + ")"
-        #         i += 1
+        else:
+            while os.path.exists(self.log_path):
+                self.log_path = old_path + "(" + str(i) + ")"
+                i += 1
 
-        # os.mkdir(self.log_path)
+        os.mkdir(self.log_path)
 
 
     def log_measures(self, environ):

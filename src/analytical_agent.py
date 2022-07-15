@@ -115,8 +115,8 @@ class Analytical_Agent(Agent):
             else:
                 return []
 
-        T = 240
-        T_max = 360
+        T = 360
+        T_max = 480
         sum_Q = np.sum([x.arr_rate for x in self.movements.values()])
         
         priority_list = []

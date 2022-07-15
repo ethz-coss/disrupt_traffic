@@ -5,7 +5,7 @@ class Movement:
     """
     The class defining a Movement on an intersection, a Movement of vehicles from incoming road -> outgoing road
     """
-    def __init__(self, ID, in_road, out_road, in_lanes, out_lanes, in_length, out_length, clearing_time=2, phases=[]):
+    def __init__(self, ID, in_road, out_road, in_lanes, out_lanes, in_length, out_length, clearing_time=5, phases=[]):
         """
         initialises the Movement, the movement has a type 1, 2 or 3
         1 -> turn right, 2 -> turn left, 3 -> go straight

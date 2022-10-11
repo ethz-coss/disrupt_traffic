@@ -19,7 +19,7 @@ class Agent:
         self.total_rewards = []
         self.reward_count = 0
         
-        self.action = 0
+        self.action = Phase(ID=0)
         self.phase = Phase(ID="")
 
         self.action_freq = 10

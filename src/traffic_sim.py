@@ -47,6 +47,7 @@ def parse_args():
     parser.add_argument("--meta", default=False, type=bool, help="indicates if meta learning for ML")
     parser.add_argument("--load_cluster", default=None, type=str, help="path to the clusters and models to be loaded")
     parser.add_argument("--ID", default=None, type=int, help="id used for naming")
+    parser.add_argument("--gamma", default=0.8, type=float, help="gamma parameter for the DQN")
 
     return parser.parse_args()
 
@@ -102,12 +103,12 @@ for i_episode in range(num_episodes):
             if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
                 if len(environ.memory)>environ.batch_size:
                     experience = environ.memory.sample()
-                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer))
+                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma))
 
             elif environ.agents_type == 'presslight':
                 if len(environ.memory)>environ.batch_size:
                     experience = environ.memory.sample()
-                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, tau=1))
+                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma, tau=1))
 
     if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or  environ.agents_type == 'presslight':
         if environ.eng.get_average_travel_time() < best_time:

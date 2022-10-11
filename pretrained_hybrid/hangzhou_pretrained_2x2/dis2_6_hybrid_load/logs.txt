@@ -1,0 +1,429 @@
+../scenarios/hangzhou/dis2_6.config
+1
+3600
+10
+64
+0.0005
+mean vehicle count: 1761.0 with sd: 0.0
+mean travel time: 933.5950385517936 with sd: 0.0
+max vehicle time: 1761.0
+min travel time: 933.5950385517936
+best epoch: 0
+
+intersection_1_1
+movement 0 max wait time: 557
+movement 0 avg wait time: 230.33333333333334
+movement 1 max wait time: 2177
+movement 1 avg wait time: 2177.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 737
+movement 4 avg wait time: 382.0
+movement 5 max wait time: 2812
+movement 5 avg wait time: 2812.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 557
+movement 7 avg wait time: 217.83333333333334
+movement 8 max wait time: 1392
+movement 8 avg wait time: 697.0
+movement 9 max wait time: 2267
+movement 9 avg wait time: 2267.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 737
+movement 11 avg wait time: 379.0
+
+intersection_1_2
+movement 0 max wait time: 547
+movement 0 avg wait time: 174.14285714285714
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 742
+movement 4 avg wait time: 361.1666666666667
+movement 5 max wait time: 1097
+movement 5 avg wait time: 979.5
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 507
+movement 7 avg wait time: 146.28571428571428
+movement 8 max wait time: 17
+movement 8 avg wait time: 12.0
+movement 9 max wait time: 1152
+movement 9 avg wait time: 1007.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 742
+movement 11 avg wait time: 363.6666666666667
+
+intersection_1_3
+movement 0 max wait time: 67
+movement 0 avg wait time: 19.166666666666668
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 702
+movement 4 avg wait time: 115.61111111111111
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 287
+movement 7 avg wait time: 46.75
+movement 8 max wait time: 287
+movement 8 avg wait time: 41.45652173913044
+movement 9 max wait time: 1212
+movement 9 avg wait time: 925.3333333333334
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 702
+movement 11 avg wait time: 131.47368421052633
+
+intersection_1_4
+movement 0 max wait time: 92
+movement 0 avg wait time: 35.18181818181818
+movement 1 max wait time: 1772
+movement 1 avg wait time: 689.5
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 892
+movement 4 avg wait time: 447.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 92
+movement 7 avg wait time: 32.416666666666664
+movement 8 max wait time: 2102
+movement 8 avg wait time: 710.3333333333334
+movement 9 max wait time: 2327
+movement 9 avg wait time: 1377.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 612
+movement 11 avg wait time: 382.0
+
+intersection_2_1
+movement 0 max wait time: 457
+movement 0 avg wait time: 279.0
+movement 1 max wait time: 722
+movement 1 avg wait time: 540.75
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 0
+movement 4 avg wait time: 0.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 1052
+movement 7 avg wait time: 473.6666666666667
+movement 8 max wait time: 2
+movement 8 avg wait time: 2.0
+movement 9 max wait time: 687
+movement 9 avg wait time: 222.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 722
+movement 11 avg wait time: 363.0
+
+intersection_2_2
+movement 0 max wait time: 907
+movement 0 avg wait time: 310.57142857142856
+movement 1 max wait time: 1882
+movement 1 avg wait time: 1784.5
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 547
+movement 4 avg wait time: 547.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 907
+movement 7 avg wait time: 333.25
+movement 8 max wait time: 2727
+movement 8 avg wait time: 709.0
+movement 9 max wait time: 912
+movement 9 avg wait time: 422.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 547
+movement 11 avg wait time: 308.25
+
+intersection_2_3
+movement 0 max wait time: 517
+movement 0 avg wait time: 43.31578947368421
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 777
+movement 4 avg wait time: 275.1818181818182
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 47
+movement 7 avg wait time: 18.25
+movement 8 max wait time: 502
+movement 8 avg wait time: 100.33333333333333
+movement 9 max wait time: 527
+movement 9 avg wait time: 527.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 777
+movement 11 avg wait time: 255.63636363636363
+
+intersection_2_4
+movement 0 max wait time: 32
+movement 0 avg wait time: 27.0
+movement 1 max wait time: 1087
+movement 1 avg wait time: 668.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 0
+movement 4 avg wait time: 0.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 17
+movement 7 avg wait time: 14.5
+movement 8 max wait time: 1087
+movement 8 avg wait time: 549.5
+movement 9 max wait time: 0
+movement 9 avg wait time: 0.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 0
+movement 11 avg wait time: 0.0
+
+intersection_3_1
+movement 0 max wait time: 227
+movement 0 avg wait time: 36.09090909090909
+movement 1 max wait time: 3092
+movement 1 avg wait time: 3092.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 1557
+movement 4 avg wait time: 1557.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 17
+movement 7 avg wait time: 9.5
+movement 8 max wait time: 1847
+movement 8 avg wait time: 304.22222222222223
+movement 9 max wait time: 2867
+movement 9 avg wait time: 1442.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 1557
+movement 11 avg wait time: 957.0
+
+intersection_3_2
+movement 0 max wait time: 492
+movement 0 avg wait time: 44.22222222222222
+movement 1 max wait time: 1532
+movement 1 avg wait time: 1532.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 1692
+movement 4 avg wait time: 773.6666666666666
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 492
+movement 7 avg wait time: 132.0
+movement 8 max wait time: 1532
+movement 8 avg wait time: 178.1764705882353
+movement 9 max wait time: 937
+movement 9 avg wait time: 589.5
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 1692
+movement 11 avg wait time: 927.0
+
+intersection_3_3
+movement 0 max wait time: 27
+movement 0 avg wait time: 17.416666666666668
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 882
+movement 4 avg wait time: 434.14285714285717
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 57
+movement 7 avg wait time: 20.88888888888889
+movement 8 max wait time: 237
+movement 8 avg wait time: 58.19047619047619
+movement 9 max wait time: 907
+movement 9 avg wait time: 462.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 882
+movement 11 avg wait time: 429.85714285714283
+
+intersection_3_4
+movement 0 max wait time: 32
+movement 0 avg wait time: 24.5
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 2867
+movement 4 avg wait time: 2867.0
+movement 5 max wait time: 2867
+movement 5 avg wait time: 2867.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 32
+movement 7 avg wait time: 17.0
+movement 8 max wait time: 2
+movement 8 avg wait time: 2.0
+movement 9 max wait time: 0
+movement 9 avg wait time: 0.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 0
+movement 11 avg wait time: 0.0
+
+intersection_4_1
+movement 0 max wait time: 142
+movement 0 avg wait time: 52.0
+movement 1 max wait time: 0
+movement 1 avg wait time: 0.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 562
+movement 4 avg wait time: 360.125
+movement 5 max wait time: 857
+movement 5 avg wait time: 857.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 127
+movement 7 avg wait time: 55.333333333333336
+movement 8 max wait time: 127
+movement 8 avg wait time: 50.125
+movement 9 max wait time: 297
+movement 9 avg wait time: 297.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 547
+movement 11 avg wait time: 400.57142857142856
+
+intersection_4_2
+movement 0 max wait time: 97
+movement 0 avg wait time: 41.375
+movement 1 max wait time: 3252
+movement 1 avg wait time: 3252.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 1167
+movement 4 avg wait time: 427.8333333333333
+movement 5 max wait time: 1697
+movement 5 avg wait time: 884.5
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 97
+movement 7 avg wait time: 32.0
+movement 8 max wait time: 1182
+movement 8 avg wait time: 473.42857142857144
+movement 9 max wait time: 1897
+movement 9 avg wait time: 1177.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 1197
+movement 11 avg wait time: 678.25
+
+intersection_4_3
+movement 0 max wait time: 87
+movement 0 avg wait time: 49.0
+movement 1 max wait time: 2387
+movement 1 avg wait time: 2387.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 1177
+movement 4 avg wait time: 907.0
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 87
+movement 7 avg wait time: 38.0
+movement 8 max wait time: 2387
+movement 8 avg wait time: 1194.5
+movement 9 max wait time: 0
+movement 9 avg wait time: 0.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 1177
+movement 11 avg wait time: 907.0
+
+intersection_4_4
+movement 0 max wait time: 62
+movement 0 avg wait time: 30.333333333333332
+movement 1 max wait time: 2262
+movement 1 avg wait time: 2262.0
+movement 2 max wait time: 0
+movement 2 avg wait time: 0.0
+movement 3 max wait time: 0
+movement 3 avg wait time: 0.0
+movement 4 max wait time: 2217
+movement 4 avg wait time: 1434.5
+movement 5 max wait time: 0
+movement 5 avg wait time: 0.0
+movement 6 max wait time: 0
+movement 6 avg wait time: 0.0
+movement 7 max wait time: 62
+movement 7 avg wait time: 27.0
+movement 8 max wait time: 1562
+movement 8 avg wait time: 730.75
+movement 9 max wait time: 297
+movement 9 avg wait time: 162.0
+movement 10 max wait time: 0
+movement 10 avg wait time: 0.0
+movement 11 max wait time: 1517
+movement 11 avg wait time: 619.5
+
+

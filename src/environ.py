@@ -92,16 +92,16 @@ class Environment:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         if args.load:
-            self.local_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
+            self.local_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
             self.local_net.load_state_dict(torch.load(args.load, map_location=torch.device('cpu')))
             self.local_net.eval()
             
-            self.target_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
+            self.target_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
             self.target_net.load_state_dict(torch.load(args.load, map_location=torch.device('cpu')))
             self.target_net.eval()
         else:
-            self.local_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
-            self.target_net = DQN(self.n_states, self.n_actions, seed=2).to(self.device)
+            self.local_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
+            self.target_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
 
         self.optimizer = optim.Adam(self.local_net.parameters(), lr=args.lr, amsgrad=True)
         self.memory = ReplayMemory(self.n_actions, batch_size=args.batch_size)
@@ -153,12 +153,12 @@ class Environment:
         
         for lane in self.lanes:
             lane.update_flow_data(self.eng, lane_vehs)
-        flow, density = get_mfd_data(time, lanes_count, self.lanes)
-        if flow != None and density != None and flow != [] and density != []:
-            self.flow += flow
-            self.density += density
-        if self.flow != [] and self.density !=[]:
-            self.mfd_data.append((self.density, self.flow))
+        # flow, density = get_mfd_data(time, lanes_count, self.lanes)
+        # if flow != None and density != None and flow != [] and density != []:
+        #     self.flow += flow
+        #     self.density += density
+        # if self.flow != [] and self.density !=[]:
+        #     self.mfd_data.append((self.density, self.flow))
         
 
         veh_distance = 0

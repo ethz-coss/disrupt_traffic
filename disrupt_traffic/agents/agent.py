@@ -1,4 +1,4 @@
-from intersection import Movement, Phase
+from engine.cityflow.intersection import Movement, Phase
 import numpy as np
 
 class Agent:

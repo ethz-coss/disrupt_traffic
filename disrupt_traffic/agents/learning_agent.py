@@ -1,12 +1,9 @@
-import cityflow
 import torch
 import numpy as np
 import random
-import operator
 
-from intersection import Movement, Phase
-from agent import Agent
-from dqn import DQN, ReplayMemory, optimize_model
+from agents.agent import Agent
+from models.dqn import DQN, ReplayMemory, optimize_model
 
 import torch.nn as nn
 from torch.optim import Adam

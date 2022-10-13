@@ -4,25 +4,25 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import dill
 
 import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 from torch.optim import Adam
 
-from dqn import DQN, ReplayMemory, optimize_model
-from learning_agent import Learning_Agent
-from analytical_agent import Analytical_Agent
-from demand_agent import Demand_Agent
-from hybrid_agent import Hybrid_Agent
-from presslight_agent import Presslight_Agent
-from fixed_agent import Fixed_Agent
-from random_agent import Random_Agent
-from denflow_agent import Denflow_Agent
+from models.mlp import MLP
+from models.dqn import ReplayMemory#, optimize_model
+from agents.learning_agent import Learning_Agent
+from agents.analytical_agent import Analytical_Agent
+# from demand_agent import Demand_Agent
+# from hybrid_agent import Hybrid_Agent
+# from presslight_agent import Presslight_Agent
+# from fixed_agent import Fixed_Agent
+# from random_agent import Random_Agent
+# from denflow_agent import Denflow_Agent
 
-from policy_agent import DPGN, Policy_Agent
-from intersection import Lane
+# from policy_agent import DPGN, Policy_Agent
+from engine.cityflow.intersection import Lane
 
 class Environment:
     """
@@ -62,18 +62,18 @@ class Environment:
                 new_agent = Analytical_Agent(self.eng, ID=agent_id)
             elif self.agents_type == 'learning':
                 new_agent = Learning_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            elif self.agents_type == 'demand':
-                new_agent = Demand_Agent(self.eng, ID=agent_id)
-            elif self.agents_type == 'hybrid':
-                new_agent = Hybrid_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            elif self.agents_type == 'presslight':
-                new_agent = Presslight_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            elif self.agents_type == 'fixed':
-                new_agent = Fixed_Agent(self.eng, ID=agent_id)
-            elif self.agents_type == 'random':
-                new_agent = Random_Agent(self.eng, ID=agent_id)
-            elif self.agents_type == 'denflow':
-                new_agent = Denflow_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
+            # elif self.agents_type == 'demand':
+            #     new_agent = Demand_Agent(self.eng, ID=agent_id)
+            # elif self.agents_type == 'hybrid':
+            #     new_agent = Hybrid_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
+            # elif self.agents_type == 'presslight':
+            #     new_agent = Presslight_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
+            # elif self.agents_type == 'fixed':
+            #     new_agent = Fixed_Agent(self.eng, ID=agent_id)
+            # elif self.agents_type == 'random':
+            #     new_agent = Random_Agent(self.eng, ID=agent_id)
+            # elif self.agents_type == 'denflow':
+            #     new_agent = Denflow_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
             else:
                 raise Exception("The specified agent type:", args.agents_type, "is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")  
             self.agents.append(new_agent)
@@ -84,24 +84,24 @@ class Environment:
         self.n_actions = len(self.agents[0].phases)
         self.n_states = n_states
         
-        if self.agents_type == 'cluster':
-            self.cluster_models = Cluster_Models(n_states=n_states, n_actions=self.n_actions, lr=args.lr, batch_size=self.batch_size)
-            # self.cluster_algo = SOStream.sostream.SOStream(alpha=0, min_pts=9, merge_threshold=0.01)
-            self.cluster_algo = Mfd_Clustering(self.cluster_models)
+        # if self.agents_type == 'cluster':
+        #     self.cluster_models = Cluster_Models(n_states=n_states, n_actions=self.n_actions, lr=args.lr, batch_size=self.batch_size)
+        #     # self.cluster_algo = SOStream.sostream.SOStream(alpha=0, min_pts=9, merge_threshold=0.01)
+        #     self.cluster_algo = Mfd_Clustering(self.cluster_models)
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         if args.load:
-            self.local_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
+            self.local_net = MLP(self.n_states, self.n_actions, seed=2).to(self.device)
             self.local_net.load_state_dict(torch.load(args.load, map_location=torch.device('cpu')))
             self.local_net.eval()
             
-            self.target_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
+            self.target_net = MLP(self.n_states, self.n_actions, seed=2).to(self.device)
             self.target_net.load_state_dict(torch.load(args.load, map_location=torch.device('cpu')))
             self.target_net.eval()
         else:
-            self.local_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
-            self.target_net = DQN(self.n_states, self.n_actions, args.gamma, seed=2).to(self.device)
+            self.local_net = MLP(self.n_states, self.n_actions, seed=2).to(self.device)
+            self.target_net = MLP(self.n_states, self.n_actions, seed=2).to(self.device)
 
         self.optimizer = optim.Adam(self.local_net.parameters(), lr=args.lr, amsgrad=True)
         self.memory = ReplayMemory(self.n_actions, batch_size=args.batch_size)

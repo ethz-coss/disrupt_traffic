@@ -1,29 +1,20 @@
-import cityflow
 import numpy as np
 
-import math
 import random
 
-from itertools import count
-import torch
-import torch.optim as optim
-
 from collections import namedtuple
-import torch.nn as nn
-import torch.nn.functional as F
 import random
 
 import argparse
-import os
 
-from dqn import DQN, ReplayMemory, optimize_model
+# from models.dqn import optimize_model
 from environ import Environment
 from logger import Logger
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--sim_config", default='../scenarios/4x4/1.config',  type=str, help="the relative path to the simulation config file")
+    parser.add_argument("--sim_config", default='../scenarios/2x2/1.config',  type=str, help="the relative path to the simulation config file")
 
     parser.add_argument("--num_episodes", default=1, type=int,
                         help="the number of episodes to run (one episosde consists of a full simulation run for num_sim_steps)"
@@ -61,7 +52,7 @@ else:
     n_states = 57
 
 environ = Environment(args, n_actions=9, n_states=n_states)
-        
+
 num_episodes = args.num_episodes
 num_sim_steps = args.num_sim_steps
 
@@ -99,16 +90,16 @@ for i_episode in range(num_episodes):
         t += 1
       
         step = (step+1) % environ.update_freq
-        if step == 0 and args.mode == 'train':
-            if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
-                if len(environ.memory)>environ.batch_size:
-                    experience = environ.memory.sample()
-                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma))
+        # if step == 0 and args.mode == 'train':
+        #     if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
+        #         if len(environ.memory)>environ.batch_size:
+        #             experience = environ.memory.sample()
+        #             logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma))
 
-            elif environ.agents_type == 'presslight':
-                if len(environ.memory)>environ.batch_size:
-                    experience = environ.memory.sample()
-                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma, tau=1))
+        #     elif environ.agents_type == 'presslight':
+        #         if len(environ.memory)>environ.batch_size:
+        #             experience = environ.memory.sample()
+        #             logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma, tau=1))
 
     if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or  environ.agents_type == 'presslight':
         if environ.eng.get_average_travel_time() < best_time:

@@ -1,11 +1,8 @@
-import cityflow
 import numpy as np
-import random
 import queue
 import operator
 
-from intersection import Movement, Phase
-from agent import Agent
+from agents.agent import Agent
 
 class Analytical_Agent(Agent):
     """

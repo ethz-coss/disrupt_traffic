@@ -14,7 +14,6 @@ GAMMA = 0.8
 TAU = 1e-3              # for soft update of target parameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
 
 class DQNAgent:
     "Interacts with the environment"
@@ -99,7 +98,7 @@ class DQN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-def optimize_model(experiences, net_local, net_target, optimizer, gamma=GAMMA, tau=TAU):
+def optimize_model(experiences, net_local, net_target, optimizer, gamma=GAMMA, tau=TAU, criterion=None):
     """Update value parameters using given batch of experience tuples.
 
     Params
@@ -112,7 +111,7 @@ def optimize_model(experiences, net_local, net_target, optimizer, gamma=GAMMA, t
     if criterion is None:
         criterion = nn.MSELoss()
 
-    states, actions, rewards, next_state, dones = experiences
+    states, actions, rewards, next_states, dones = experiences
 
     net_local.train()
     net_target.eval()
@@ -120,9 +119,9 @@ def optimize_model(experiences, net_local, net_target, optimizer, gamma=GAMMA, t
     predicted_targets = net_local(states).gather(1, actions)
 
     with torch.no_grad():
-        labels_next = net_target(next_state).detach().max(1)[0].unsqueeze(1)
+        labels_next = net_target(next_states).detach().max(1)[0].unsqueeze(1)
 
-    labels = rewards + (gamma * labels_next * (1-dones))
+    labels = rewards + (gamma * labels_next * ~dones)
 
     # .detach() ->  Returns a new Tensor, detached from the current graph.
 
@@ -187,14 +186,8 @@ class ReplayMemory(object):
     def sample(self):
         """Randomly sample a batch of experiences from memory"""
         samples = random.sample(self.memory, k=self.batch_size)
-        samples = self.experience(*zip(*samples))
 
-        actions = torch.tensor(samples.action).long().to(device)
-        states = torch.tensor(samples.state).float().to(device)
-        next_states = torch.tensor(samples.state_next).float().to(device)
-        rewards = torch.tensor(samples.reward).float().to(device)
-        dones = torch.tensor(samples.done).float().to(device)
-
+        states, actions, rewards, next_states, dones = map(torch.stack, zip(*samples))
         return (states, actions, rewards, next_states, dones)
 
     def __len__(self):

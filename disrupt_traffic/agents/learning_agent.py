@@ -61,14 +61,16 @@ class Learning_Agent(Agent):
                 reward = self.get_reward(lanes_count)
                 self.reward = reward
                 self.total_rewards += [reward]
-                reward = torch.tensor([reward], dtype=torch.float)
-                next_state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance)).unsqueeze(0)
-
-                memory.add(self.state, self.action.ID, reward, next_state, done)
+                reward = torch.tensor([reward], dtype=torch.float, device=device)
+                done = torch.tensor([done], dtype=torch.bool, device=device)
+                action = torch.tensor([self.action.ID], device=device)
+                next_state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance),
+                                               device=device)
+                memory.add(self.state, action, reward, next_state, done)
                 self.action_type = "act"
 
             if self.action_type == "act":
-                self.state = np.asarray(self.observe(eng, time, lanes_count, lane_vehs, veh_distance))
+                self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
                 self.action = self.act(local_net, self.state, time, lanes_count, eps=eps)
                 self.green_time = 10
 
@@ -105,13 +107,13 @@ class Learning_Agent(Agent):
         :param eps: the epsilon value used in the epsilon greedy learing
         """
         if random.random() > eps:
-            state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+            state = state.unsqueeze(0)
             net_local.eval()
             with torch.no_grad():
                 action_values = net_local(state)
             net_local.train()
 
-            action = np.argmax(action_values.cpu().data.numpy())
+            action = action_values.max(1)[1].item()
             return self.phases[action]
         else:
             return self.phases[random.choice(np.arange(self.n_actions))]

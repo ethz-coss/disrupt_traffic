@@ -7,7 +7,7 @@ import random
 
 import argparse
 
-# from models.dqn import optimize_model
+from models.dqn import optimize_model
 from environ import Environment
 from logger import Logger
 
@@ -90,16 +90,16 @@ for i_episode in range(num_episodes):
         t += 1
       
         step = (step+1) % environ.update_freq
-        # if step == 0 and args.mode == 'train':
-        #     if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
-        #         if len(environ.memory)>environ.batch_size:
-        #             experience = environ.memory.sample()
-        #             logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma))
+        if step == 0 and args.mode == 'train':
+            if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or environ.agents_type == 'denflow':
+                if len(environ.memory)>environ.batch_size:
+                    experience = environ.memory.sample()
+                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=args.gamma, tau=0.5))
 
-        #     elif environ.agents_type == 'presslight':
-        #         if len(environ.memory)>environ.batch_size:
-        #             experience = environ.memory.sample()
-        #             logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=environ.target_net.gamma, tau=1))
+            elif environ.agents_type == 'presslight':
+                if len(environ.memory)>environ.batch_size:
+                    experience = environ.memory.sample()
+                    logger.losses.append(optimize_model(experience, environ.local_net, environ.target_net, environ.optimizer, gamma=args.gamma, tau=1))
 
     if environ.agents_type == 'learning' or environ.agents_type == 'hybrid' or  environ.agents_type == 'presslight':
         if environ.eng.get_average_travel_time() < best_time:

@@ -104,7 +104,7 @@ class Environment:
             self.target_net = MLP(self.n_states, self.n_actions, seed=2).to(self.device)
 
         self.optimizer = optim.Adam(self.local_net.parameters(), lr=args.lr, amsgrad=True)
-        self.memory = ReplayMemory(self.n_actions, batch_size=args.batch_size)
+        self.memory = ReplayMemory(batch_size=args.batch_size)
 
         self.mfd_data = []
         self.agent_history = []

@@ -1,12 +1,11 @@
-from intersection import Movement, Phase
-from fixed_agent import Fixed_Agent
+from agents.fixed_agent import Fixed_Agent
 import random
 
 class Random_Agent(Fixed_Agent):
     """
     The random agent selecting phases randomly
     """
-    def __init__(self, eng, ID=''):
+    def __init__(self, eng, ID='', **kwargs):
         super().__init__(eng, ID)
         self.agents_type = 'random'
     

@@ -1,10 +1,10 @@
-from intersection import Movement, Phase
-from agent import Agent
+from engine.cityflow.intersection import Phase
+from agents.agent import Agent
 import numpy as np
 
 class Fixed_Agent(Agent):
 
-    def __init__(self, eng, ID=''):
+    def __init__(self, eng, ID='', **kwargs):
         super().__init__(eng, ID)
         self.agents_type = 'fixed'
 

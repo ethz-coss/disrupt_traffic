@@ -1,10 +1,6 @@
-import cityflow
 import torch
-import numpy as np
-import random
-import operator
 
-from learning_agent import Learning_Agent
+from agents.learning_agent import Learning_Agent
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -4,6 +4,7 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+from importlib import import_module
 
 import torch
 import torch.nn as nn
@@ -23,6 +24,28 @@ from agents.analytical_agent import Analytical_Agent
 
 # from policy_agent import DPGN, Policy_Agent
 from engine.cityflow.intersection import Lane
+
+
+def import_string(dotted_path):
+    """
+    Import a dotted module path and return the attribute/class designated by the
+    last name in the path. Raise ImportError if the import failed.
+    """
+    try:
+        module_path, class_name = dotted_path.rsplit('.', 1)
+    except ValueError:
+        msg = "%s doesn't look like a module path" % dotted_path
+        raise ImportError(msg)
+
+    module = import_module(module_path)
+
+    try:
+        return getattr(module, class_name)
+    except AttributeError:
+        msg = 'Module "%s" does not define a "%s" attribute/class' % (
+            module_path, class_name)
+        raise ImportError(msg)
+        
 
 class Environment:
     """
@@ -55,13 +78,20 @@ class Environment:
 
         self.agents_type = args.agents_type
         
-        
+        # load needed agent modules
+        try: 
+            import_path = f"agents.{self.agents_type}_agent.{self.agents_type.capitalize()}_Agent"
+            AgentClass = import_string(import_path)
+        except:
+            raise Exception(f"The specified agent type: {self.agents_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")  
+
         agent_ids = [x for x in self.eng.get_intersection_ids() if not self.eng.is_intersection_virtual(x)]
         for agent_id in agent_ids:
-            if self.agents_type == 'analytical':
-                new_agent = Analytical_Agent(self.eng, ID=agent_id)
-            elif self.agents_type == 'learning':
-                new_agent = Learning_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
+            new_agent = AgentClass(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
+            # if self.agents_type == 'analytical':
+            #     new_agent = Analytical_Agent(self.eng, ID=agent_id)
+            # elif self.agents_type == 'learning':
+            #     new_agent = Learning_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
             # elif self.agents_type == 'demand':
             #     new_agent = Demand_Agent(self.eng, ID=agent_id)
             # elif self.agents_type == 'hybrid':
@@ -74,8 +104,7 @@ class Environment:
             #     new_agent = Random_Agent(self.eng, ID=agent_id)
             # elif self.agents_type == 'denflow':
             #     new_agent = Denflow_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            else:
-                raise Exception("The specified agent type:", args.agents_type, "is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")  
+            # else:
             self.agents.append(new_agent)
             
         self.action_freq = 10   #typical update freq for agents

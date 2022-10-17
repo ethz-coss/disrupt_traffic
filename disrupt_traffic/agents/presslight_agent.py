@@ -9,13 +9,13 @@ class Presslight_Agent(Learning_Agent):
     """
     The class defining an agent which controls the traffic lights using reinforcement learning approach called PressureLight
     """
-    def __init__(self, eng, ID='', in_roads=[], out_roads=[], n_states=0, lr=None, batch_size=None):
+    def __init__(self, env, ID='', in_roads=[], out_roads=[], n_states=0, lr=None, batch_size=None):
         """
         initialises the Learning Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 
         :param eng: the cityflow simulation engine
         """
-        super().__init__(eng, ID, in_roads, out_roads, n_states, lr, batch_size)
+        super().__init__(env, ID, in_roads, out_roads, n_states, lr, batch_size)
         self.agents_type = 'presslight'
 
         

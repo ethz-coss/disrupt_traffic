@@ -5,12 +5,13 @@ class Agent:
     """
     The base clase of an Agent, Learning and Analytical agents derive from it, basically defines methods used by both types of agents
     """
-    def __init__(self, eng, ID):
+    def __init__(self, env, ID):
         """
         initialises the Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 
         """
         self.ID = ID
+        self.env = env
         
         self.movements = {}
         self.phases = {}
@@ -28,8 +29,8 @@ class Agent:
         self.action_type = "act"
         self.clearing_time = 5
 
-        self.init_movements(eng)
-        self.init_phases(eng)
+        self.init_movements(self.env.eng)
+        self.init_phases(self.env.eng)
 
         self.in_lanes = [x.in_lanes for x in self.movements.values()]
         self.in_lanes = set([x for sublist in self.in_lanes for x in sublist])

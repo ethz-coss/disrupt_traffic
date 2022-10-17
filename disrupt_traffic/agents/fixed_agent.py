@@ -4,8 +4,8 @@ import numpy as np
 
 class Fixed_Agent(Agent):
 
-    def __init__(self, eng, ID='', **kwargs):
-        super().__init__(eng, ID)
+    def __init__(self, env, ID='', **kwargs):
+        super().__init__(env, ID)
         self.agents_type = 'fixed'
 
 

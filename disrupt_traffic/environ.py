@@ -87,24 +87,7 @@ class Environment:
 
         agent_ids = [x for x in self.eng.get_intersection_ids() if not self.eng.is_intersection_virtual(x)]
         for agent_id in agent_ids:
-            new_agent = AgentClass(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            # if self.agents_type == 'analytical':
-            #     new_agent = Analytical_Agent(self.eng, ID=agent_id)
-            # elif self.agents_type == 'learning':
-            #     new_agent = Learning_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            # elif self.agents_type == 'demand':
-            #     new_agent = Demand_Agent(self.eng, ID=agent_id)
-            # elif self.agents_type == 'hybrid':
-            #     new_agent = Hybrid_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            # elif self.agents_type == 'presslight':
-            #     new_agent = Presslight_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            # elif self.agents_type == 'fixed':
-            #     new_agent = Fixed_Agent(self.eng, ID=agent_id)
-            # elif self.agents_type == 'random':
-            #     new_agent = Random_Agent(self.eng, ID=agent_id)
-            # elif self.agents_type == 'denflow':
-            #     new_agent = Denflow_Agent(self.eng, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
-            # else:
+            new_agent = AgentClass(self, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=self.batch_size)
             self.agents.append(new_agent)
             
         self.action_freq = 10   #typical update freq for agents

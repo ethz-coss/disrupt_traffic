@@ -9,13 +9,13 @@ class Analytical_Agent(Agent):
     The class defining an agent which controls the traffic lights using the analytical approach
     from Helbing, Lammer's works
     """
-    def __init__(self, eng, ID='', **kwargs):
+    def __init__(self, env, ID='', **kwargs):
         """
         initialises the Analytical Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 
         :param eng: the cityflow simulation engine
         """
-        super().__init__(eng, ID)
+        super().__init__(env, ID)
 
         self.action_queue = queue.Queue()
         self.agents_type = 'analytical'

@@ -5,8 +5,8 @@ class Random_Agent(Fixed_Agent):
     """
     The random agent selecting phases randomly
     """
-    def __init__(self, eng, ID='', **kwargs):
-        super().__init__(eng, ID)
+    def __init__(self, env, ID='', **kwargs):
+        super().__init__(env, ID)
         self.agents_type = 'random'
     
     def act(self, lanes_count):

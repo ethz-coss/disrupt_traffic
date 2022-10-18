@@ -1,10 +1,9 @@
 import operator
-from intersection import Movement, Phase
-from agent import Agent
+from agents.agent import Agent
 
 class Demand_Agent(Agent):
 
-    def __init__(self, eng, ID=''):
+    def __init__(self, eng, ID='', **kwargs):
         super().__init__(eng, ID)
         self.agents_type = 'demand'
 

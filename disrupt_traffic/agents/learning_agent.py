@@ -51,7 +51,9 @@ class Learning_Agent(Agent):
             idx+=1    
 
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
+        local_net = policy.net_local
+        memory = policy.memory
         if time % self.action_freq == 0:
             if self.action_type == "reward":
                 reward = self.get_reward(lanes_count)

@@ -220,7 +220,7 @@ class Agent:
 
 
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
         """
         represents a single step of the simulation for the analytical agent
         :param time: the current timestep

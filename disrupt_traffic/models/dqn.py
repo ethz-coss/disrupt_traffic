@@ -15,10 +15,13 @@ TAU = 1e-3              # for soft update of target parameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class DQNAgent:
-    "Interacts with the environment"
 
-    def __init__(self, num_observations, num_actions, gamma=0.99, epsilon_min=0.05, epsilon_max=1, batch_size=64, buffer_size=5e5):
+class DQN:
+    """ Actor (Policy) Model."""
+
+    def __init__(self, num_observations, num_actions, seed=2, gamma=0.99, lr=5e-4,
+                 epsilon_min=0.05, epsilon_max=1, batch_size=64, buffer_size=5e5,
+                 load=False):
         self.num_observations = num_observations
         self.num_actions = num_actions
         self.gamma = gamma
@@ -28,15 +31,26 @@ class DQNAgent:
         self.buffer_size = buffer_size
 
         # The first model makes the predictions for Q-values which are used to make a action.
-        self.net_local = MLP(num_observations, num_actions).to(device)
+        self.net_local = MLP(num_observations, num_actions,
+                             seed=seed).to(device)
+
         # Build a target model for the prediction of future rewards.
-        # The weights of a target model get updated every `update_target_network` steps thus when the
-        # loss between the Q-values is calculated the target Q-value is stable.
-        self.net_target = MLP(num_observations, num_actions).to(device)
+        self.net_target = MLP(
+            num_observations, num_actions, seed=seed).to(device)
         self.net_target.load_state_dict(self.net_local.state_dict())
-        # Deepmind paper used RMSProp however then Adam optimizer is faster
-        self.optimizer = optim.Adam(self.net_local.parameters(), lr=1e-3)
-        self.memory = ReplayMemory(buffer_size, batch_size=batch_size)
+
+        if load:
+            self.net_local.load_state_dict(torch.load(
+                load, map_location=torch.device('cpu')))
+            self.net_local.eval()
+
+            self.net_target.load_state_dict(torch.load(
+                load, map_location=torch.device('cpu')))
+            self.net_target.eval()
+
+        self.optimizer = optim.Adam(
+            self.net_local.parameters(), lr=lr, amsgrad=True)
+        self.memory = ReplayMemory(batch_size=batch_size)
         self.step_count = 0
 
     def step(self, action, state, state_next, reward, done):
@@ -68,77 +82,62 @@ class DQNAgent:
             self.net_local.train()
         return action
 
-class DQN(nn.Module):
-    """ Actor (Policy) Model."""
-    def __init__(self, state_size, action_size, gamma=0.8, seed=2, fc1_unit=128,
-                 fc2_unit = 64):
-        """
-         Initialize parameters and build model.
+    def optimize_model(self, gamma=GAMMA, tau=TAU, criterion=None):
+        """Update value parameters using given batch of experience tuples.
+
         Params
         =======
-            state_size (int): Dimension of each state
-            action_size (int): Dimension of each action
-            seed (int): Random seed
-            fc1_unit (int): Number of nodes in first hidden layer
-            fc2_unit (int): Number of nodes in second hidden layer
+
+        experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+
+        gamma (float): discount factor
         """
-        super(DQN,self).__init__()
-        self.seed = torch.manual_seed(seed)
-        self.fc1= nn.Linear(state_size,fc1_unit)
-        self.fc2 = nn.Linear(fc1_unit,fc2_unit)
-        self.fc3 = nn.Linear(fc2_unit,action_size)
-        self.gamma = 0.8
-    
-    def forward(self,x):
-        # x = state
-        """
-        Build a network that maps state -> action values.
-        """
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        if len(self.memory) < self.batch_size:
+            return 0
+        if criterion is None:
+            criterion = nn.MSELoss()
 
-def optimize_model(experiences, net_local, net_target, optimizer, gamma=GAMMA, tau=TAU, criterion=None):
-    """Update value parameters using given batch of experience tuples.
+        states, actions, rewards, next_states, dones = self.memory.sample()
 
-    Params
-    =======
+        self.net_local.train()
+        self.net_target.eval()
 
-    experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples
+        predicted_targets = self.net_local(states).gather(1, actions)
 
-    gamma (float): discount factor
-    """
-    if criterion is None:
-        criterion = nn.MSELoss()
+        with torch.no_grad():
+            labels_next = self.net_target(next_states).detach().max(1)[
+                0].unsqueeze(1)
 
-    states, actions, rewards, next_states, dones = experiences
+        labels = rewards + (gamma * labels_next * ~dones)
 
-    net_local.train()
-    net_target.eval()
+        # .detach() ->  Returns a new Tensor, detached from the current graph.
 
-    predicted_targets = net_local(states).gather(1, actions)
+        loss = criterion(predicted_targets, labels).to(device)
+        self.optimizer.zero_grad()
+        loss.backward()
 
-    with torch.no_grad():
-        labels_next = net_target(next_states).detach().max(1)[0].unsqueeze(1)
+        # for param in net_local.parameters():
+        #     param.grad.data.clamp_(-1, 1)
+        # torch.nn.utils.clip_grad.clip_grad_norm_(net_local.parameters(), 10)
 
-    labels = rewards + (gamma * labels_next * ~dones)
+        self.optimizer.step()
 
-    # .detach() ->  Returns a new Tensor, detached from the current graph.
+        # ------------------- update target network ------------------- #
+        soft_update(self.net_local, self.net_target, TAU)
 
-    loss = criterion(predicted_targets, labels).to(device)
-    optimizer.zero_grad()
-    loss.backward()
+        return loss.item()
 
-    # for param in net_local.parameters():
-    #     param.grad.data.clamp_(-1, 1)
-    # torch.nn.utils.clip_grad.clip_grad_norm_(net_local.parameters(), 10)
-
-    optimizer.step()
-
-    # ------------------- update target network ------------------- #
-    soft_update(net_local, net_target, TAU)
-
-    return loss.item()
+    def save(self, log_path, flag):
+        if flag is None:
+            prefix = 'reward'
+        elif flag:
+            prefix = 'throughput'
+        else:
+            prefix = 'time'
+        torch.save(self.net_local.state_dict(),
+                   log_path + f'/{prefix}_q_net.pt')
+        torch.save(self.net_target.state_dict(),
+                   log_path + f'/{prefix}_target_net.pt')
 
 
 def soft_update(local_model, target_model, tau):
@@ -187,7 +186,8 @@ class ReplayMemory(object):
         """Randomly sample a batch of experiences from memory"""
         samples = random.sample(self.memory, k=self.batch_size)
 
-        states, actions, rewards, next_states, dones = map(torch.stack, zip(*samples))
+        states, actions, rewards, next_states, dones = map(
+            torch.stack, zip(*samples))
         return (states, actions, rewards, next_states, dones)
 
     def __len__(self):

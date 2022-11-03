@@ -102,9 +102,10 @@ class Movement:
         for lane in self.in_lanes:
             current_vehs.update(lanes_vehs[lane])
 
-        dep_vehs = len(self.prev_vehs - current_vehs)  
+        dep_vehs = len(self.prev_vehs - current_vehs)
+        arr_vehs = len(current_vehs - self.prev_vehs)
         self.dep_vehs_num.append(dep_vehs)
-        self.arr_vehs_num.append(len(current_vehs) - (len(self.prev_vehs) - dep_vehs))
+        self.arr_vehs_num.append(arr_vehs)
         self.prev_vehs = current_vehs
 
         
@@ -218,7 +219,8 @@ class Lane:
         current_vehs.update(lanes_vehs[self.ID])
 
         dep_vehs = len(self.prev_vehs - current_vehs)
+        arr_vehs = len(current_vehs - self.prev_vehs)
         self.dep_vehs_num.append(dep_vehs)
-        self.arr_vehs_num.append(len(current_vehs) - (len(self.prev_vehs) - dep_vehs))        
+        self.arr_vehs_num.append(arr_vehs)        
         self.prev_vehs = current_vehs
 

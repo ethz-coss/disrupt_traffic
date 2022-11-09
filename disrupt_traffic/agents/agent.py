@@ -166,7 +166,7 @@ class Agent:
         for lane in self.out_lanes:
             d.append(lanes_count[lane] / self.out_lanes_length[lane])
 
-        self.density.append(np.mean(d))
+        self.density.append(sum(d)/len(d))
 
 
     def update_wait_time(self, time, action, phase, lanes_count):

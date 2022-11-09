@@ -20,7 +20,7 @@ class Analytical_Agent(Agent):
         self.action_queue = queue.Queue()
         self.agents_type = 'analytical'
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         if time % (self.reward_freq + self.clearing_time) == 0:
             self.total_rewards += [self.get_reward(lanes_count)]
@@ -79,7 +79,7 @@ class Analytical_Agent(Agent):
         if not action.movements:
             green_time = self.clearing_time
         else:
-            green_time = max(5, int(np.min([self.movements[x].green_time for x in action.movements])))
+            green_time = max(5, int(min([self.movements[x].green_time for x in action.movements])))
         return action, green_time
 
     def stabilise(self, time):
@@ -114,7 +114,7 @@ class Analytical_Agent(Agent):
 
         T = 360
         T_max = 480
-        sum_Q = np.sum([x.arr_rate for x in self.movements.values()])
+        sum_Q = sum([x.arr_rate for x in self.movements.values()])
         
         priority_list = []
 

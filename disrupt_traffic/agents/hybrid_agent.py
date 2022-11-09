@@ -84,10 +84,10 @@ class Hybrid_Agent(Learning_Agent):
     #     else:
     #         return sum_distance / num_vehs
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().step(eng, time, lane_vehs, lanes_count,
-                     veh_distance, eps, memory, local_net, done)
+                     veh_distance, eps, policy, done)
 
     def stabilise(self, time, lanes_count):
         """

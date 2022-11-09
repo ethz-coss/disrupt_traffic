@@ -196,4 +196,4 @@ if __name__=="__main__":
     run_exp(num_episodes, num_sim_steps)
 
     if args.mfd:
-        mfd_data = environ.get_mfd_data(t)
+        mfd_data = environ.get_mfd_data()

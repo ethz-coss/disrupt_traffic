@@ -55,10 +55,10 @@ class Environment:
         self.mfd_data = []
         self.agent_history = []
 
-        self.lanes = []
+        self.lanes = {}
 
         for lane_id in self.eng.get_lane_vehicles().keys():
-            self.lanes.append(Lane(self.eng, ID=lane_id))
+            self.lanes[lane_id] = Lane(self.eng, ID=lane_id)
 
         self.speeds = []
         self.stops = []
@@ -76,19 +76,7 @@ class Environment:
         veh_ids = self.eng.get_vehicles()
         speeds = []
         stops = 0
-
-        for veh_id in veh_ids:
-            speed = self.eng.get_vehicle_info(veh_id)['speed']
-            speeds.append(float(speed))
-
-            if float(speed) <= 0.1 and veh_id not in self.stopped.keys():
-                self.stopped.update({veh_id: 1})
-                stops += 1
-            elif float(speed) > 0.1 and veh_id in self.stopped.keys():
-                self.stopped.pop(veh_id)
-
-        self.speeds.append(np.mean(speeds))
-        self.stops.append(stops)
+ 
 
         lane_vehs = self.eng.get_lane_vehicles()
         lanes_count = self.eng.get_lane_vehicle_count()
@@ -96,14 +84,32 @@ class Environment:
         self.flow = []
         self.density = []
 
-        for lane in self.lanes:
+        for lane_id, lane in self.lanes.items():
             lane.update_flow_data(self.eng, lane_vehs)
+            lane.update_speeds(self, lane_vehs[lane_id])
         # flow, density = get_mfd_data(time, lanes_count, self.lanes)
         # if flow != None and density != None and flow != [] and density != []:
         #     self.flow += flow
         #     self.density += density
         # if self.flow != [] and self.density !=[]:
         #     self.mfd_data.append((self.density, self.flow))
+
+        for veh_id in veh_ids:
+            veh_info = self.eng.get_vehicle_info(veh_id)
+            speed = float(veh_info['speed'])
+            veh_lane = veh_info['drivable']
+            speeds.append(speed)
+            if veh_lane in self.lanes:
+                self.lanes[veh_lane].speeds[-1].append(speed)
+
+            if speed <= 0.1 and veh_id not in self.stopped.keys():
+                self.stopped.update({veh_id: 1})
+                stops += 1
+            elif speed > 0.1 and veh_id in self.stopped.keys():
+                self.stopped.pop(veh_id)
+
+        self.speeds.append(np.mean(speeds))
+        self.stops.append(stops)
 
         veh_distance = 0
         if self.agents_type == "hybrid" or self.agents_type == "learning" or self.agents_type == 'cluster' or self.agents_type == 'presslight':
@@ -139,7 +145,37 @@ class Environment:
             agent.action_type = 'act'
 
 
+    def get_mfd_data(self, time_window=60):
+        mfd_detailed = {}
+
+        for lane_id in self.eng.get_lane_vehicles().keys():
+            mfd_detailed[lane_id] = {"speed": [], "density": []}
+                    
+        data = mfd_detailed[lane_id]
+
+        for lane_id, lane in self.lanes.items():
+            data = mfd_detailed[lane_id]
+            speed = data['speed']
+            density = data['density']
+            
+        #     _lanespeeds = sum(lane.speeds, [])
+            _lanedensity = np.subtract(lane.arr_vehs_num, lane.dep_vehs_num).cumsum()
+            for t in range(3600):
+                time_window = min(time_window, t+1)
+                idx_start = t
+                idx_end = t+time_window
+
+                s = np.mean(sum(lane.speeds[idx_start:idx_end], []))
+                d = _lanedensity[idx_start:idx_end].mean() / lane.length 
+
+                speed.append(s)
+                density.append(d)
+
+        return mfd_detailed
+
+
 def get_mfd_data(time, lanes_count, lanes):
+    # TODO: revise/remove
     flow = []
     density = []
 

@@ -66,7 +66,7 @@ def parse_args():
                         help="mode of the run train/test")
     parser.add_argument("--replay", default=False,
                         type=bool, help="saving replay")
-    parser.add_argument("--mfd", default=True, type=bool,
+    parser.add_argument("--mfd", default=False, type=bool,
                         help="saving mfd data")
     parser.add_argument("--path", default='../runs/', type=str,
                         help="path to save data")
@@ -82,111 +82,118 @@ def parse_args():
     return parser.parse_args()
 
 
-args = parse_args()
-logger = Logger(args)
-
-if args.agents_type == 'denflow':
-    n_states = 2
-else:
-    n_states = 57
-
-environ = Environment(args, n_actions=9, n_states=n_states)
-eng = environ.eng
-
-agents = []
-# load needed agent modules
-try:
-    import_path = f"agents.{args.agents_type}_agent.{args.agents_type.capitalize()}_Agent"
-    AgentClass = import_string(import_path)
-except:
-    raise Exception(
-        f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
-
-agent_ids = [x for x in eng.get_intersection_ids(
-) if not eng.is_intersection_virtual(x)]
-for agent_id in agent_ids:
-    new_agent = AgentClass(environ, ID=agent_id, in_roads=eng.get_intersection_in_roads(
-        agent_id), out_roads=eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
-    agents.append(new_agent)
-environ.agents = agents
-
-n_actions = len(agents[0].phases)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
-policies = [policy]
-
-
 def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
 
-num_episodes = args.num_episodes
-num_sim_steps = args.num_sim_steps
 
-step = 0
-best_time = 999999
-best_veh_count = 0
-best_reward = -999999
-saved_model = None
-environ.best_epoch = 0
+def run_exp(num_episodes, num_sim_steps):
+    step = 0
+    best_time = 999999
+    best_veh_count = 0
+    best_reward = -999999
+    saved_model = None
+    environ.best_epoch = 0
 
-environ.eng.set_save_replay(open=False)
-environ.eng.set_random_seed(2)
-random.seed(2)
-np.random.seed(2)
+    environ.eng.set_save_replay(open=False)
+    environ.eng.set_random_seed(2)
+    random.seed(2)
+    np.random.seed(2)
 
-log_phases = False
+    log_phases = False
 
-for i_episode in range(num_episodes):
-    logger.losses = []
-    if i_episode == num_episodes-1 and args.replay:
-        environ.eng.set_save_replay(open=True)
-        print(args.path + "../replay_file.txt")
-        environ.eng.set_replay_file(args.path + "../replay_file.txt")
+    for i_episode in range(num_episodes):
+        logger.losses = []
+        if i_episode == num_episodes-1 and args.replay:
+            environ.eng.set_save_replay(open=True)
+            print(args.path + "../replay_file.txt")
+            environ.eng.set_replay_file(args.path + "../replay_file.txt")
 
-    print("episode ", i_episode)
-    done = False
+        print("episode ", i_episode)
+        done = False
 
-    environ.reset()
+        environ.reset()
 
-    t = 0
-    while t < num_sim_steps:
-        if t >= num_sim_steps-1:
-            done = True
+        t = 0
+        while t < num_sim_steps:
+            if t >= num_sim_steps-1:
+                done = True
 
-        environ.step(t, done, policy_mapper=policy_mapper)
-        t += 1
+            environ.step(t, done, policy_mapper=policy_mapper)
+            t += 1
 
-        step = (step+1) % environ.update_freq
-        if step == 0 and args.mode == 'train':
-            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-                tau = 1.*(environ.agents_type == 'presslight')
-                _loss = 0
-                for policy in policies:
-                    _loss += policy.optimize_model(gamma=args.gamma, tau=tau)
-                logger.losses.append(_loss)
+            step = (step+1) % environ.update_freq
+            if step == 0 and args.mode == 'train':
+                if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
+                    tau = 1.*(environ.agents_type == 'presslight')
+                    _loss = 0
+                    for policy in policies:
+                        _loss += policy.optimize_model(gamma=args.gamma, tau=tau)
+                    logger.losses.append(_loss)
 
-    if environ.agents_type in ['learning', 'hybrid', 'presslight']:
-        if environ.eng.get_average_travel_time() < best_time:
-            best_time = environ.eng.get_average_travel_time()
-            logger.save_models(policies, flag=False)
-            environ.best_epoch = i_episode
+        if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+            if environ.eng.get_average_travel_time() < best_time:
+                best_time = environ.eng.get_average_travel_time()
+                logger.save_models(policies, flag=False)
+                environ.best_epoch = i_episode
 
-        if environ.eng.get_finished_vehicle_count() > best_veh_count:
-            best_veh_count = environ.eng.get_finished_vehicle_count()
-            logger.save_models(policies, flag=True)
-            environ.best_epoch = i_episode
+            if environ.eng.get_finished_vehicle_count() > best_veh_count:
+                best_veh_count = environ.eng.get_finished_vehicle_count()
+                logger.save_models(policies, flag=True)
+                environ.best_epoch = i_episode
 
-    logger.log_measures(environ)
+        logger.log_measures(environ)
 
-    if environ.agents_type in ['learning', 'hybrid', 'presslight']:
-        # if logger.reward > best_reward:
-        best_reward = logger.reward
-        logger.save_models(policies, flag=None)
+        if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+            # if logger.reward > best_reward:
+            best_reward = logger.reward
+            logger.save_models(policies, flag=None)
 
-    print(logger.reward, environ.eng.get_average_travel_time(),
-          environ.eng.get_finished_vehicle_count())
+        print(logger.reward, environ.eng.get_average_travel_time(),
+            environ.eng.get_finished_vehicle_count())
 
 
-logger.save_log_file(environ)
-logger.serialise_data(environ, policies[0])
+    logger.save_log_file(environ)
+    logger.serialise_data(environ, policies[0])
+
+if __name__=="__main__":
+    args = parse_args()
+    logger = Logger(args)
+
+    if args.agents_type == 'denflow':
+        n_states = 2
+    else:
+        n_states = 57
+
+    environ = Environment(args, n_actions=9, n_states=n_states)
+    eng = environ.eng
+
+    agents = []
+    # load needed agent modules
+    try:
+        import_path = f"agents.{args.agents_type}_agent.{args.agents_type.capitalize()}_Agent"
+        AgentClass = import_string(import_path)
+    except:
+        raise Exception(
+            f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
+
+    agent_ids = [x for x in eng.get_intersection_ids(
+    ) if not eng.is_intersection_virtual(x)]
+    for agent_id in agent_ids:
+        new_agent = AgentClass(environ, ID=agent_id, in_roads=eng.get_intersection_in_roads(
+            agent_id), out_roads=eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
+        agents.append(new_agent)
+    environ.agents = agents
+
+    n_actions = len(agents[0].phases)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
+    policies = [policy]
+
+    num_episodes = args.num_episodes
+    num_sim_steps = args.num_sim_steps
+
+    run_exp(num_episodes, num_sim_steps)
+
+    if args.mfd:
+        mfd_data = environ.get_mfd_data(t)

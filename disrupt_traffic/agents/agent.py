@@ -220,21 +220,23 @@ class Agent:
 
 
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
+    def step(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
         """
         represents a single step of the simulation for the analytical agent
         :param time: the current timestep
         :param done: flag indicating weather this has been the last step of the episode, used for learning, here for interchangability of the two steps
         """
+        # self.action = action
+        chosen_phase = self.phases[action]
         if time % self.action_freq == 0:
             if self.action_type == "act":
                 self.total_rewards += self.get_reward(lanes_count)
                 self.reward_count += 1
-                self.action = self.act(lanes_count)
+                # self.action = self.choose_act(lanes_count)
                 self.green_time = 10
                     
-                if self.phase.ID != self.action.ID:
-                    self.update_wait_time(time, self.action, self.phase, lanes_count)
+                if self.phase.ID != action:
+                    self.update_wait_time(time, chosen_phase, self.phase, lanes_count)
                     self.set_phase(eng, self.clearing_phase)
                     self.action_freq = time + self.clearing_time
                     self.action_type = "update"
@@ -243,7 +245,7 @@ class Agent:
                     self.action_freq = time + self.green_time
 
             elif self.action_type == "update":
-                self.set_phase(eng, self.action)
+                self.set_phase(eng, chosen_phase)
                 self.action_freq = time + self.green_time
                 self.action_type = "act"
 

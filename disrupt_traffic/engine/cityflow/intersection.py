@@ -205,10 +205,28 @@ class Lane:
         self.dep_vehs_num = []
         self.arr_vehs_num = []
         self.prev_vehs = set()
-
+        self.speeds = []
 
         self.length = eng.get_lane_length(self.ID)
         
+
+    def update_speeds(self, environ, veh_ids):
+        self.speeds.append([])
+        # speeds = []
+        # for veh_id in veh_ids:
+        #     veh_info = environ.eng.get_vehicle_info(veh_id)
+        #     speed = float(veh_info['speed'])
+        #     veh_lane = veh_info['drivable']
+        #     speeds.append(speed)
+        #     # self.lanes[veh_lane].
+
+        #     if float(speed) <= 0.1 and veh_id not in environ.stopped.keys():
+        #         environ.stopped.update({veh_id: 1})
+        #         # stops += 1
+        #     elif float(speed) > 0.1 and veh_id in environ.stopped.keys():
+        #         environ.stopped.pop(veh_id)
+        # self.speeds.append(speeds)
+
 
     def update_flow_data(self, eng, lanes_vehs):
         """

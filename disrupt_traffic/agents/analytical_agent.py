@@ -20,7 +20,7 @@ class Analytical_Agent(Agent):
         self.action_queue = queue.Queue()
         self.agents_type = 'analytical'
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
+    def step(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         if time % (self.reward_freq + self.clearing_time) == 0:
             self.total_rewards += [self.get_reward(lanes_count)]
@@ -28,7 +28,7 @@ class Analytical_Agent(Agent):
             if self.action_type == "act":
                 # self.total_rewards += self.get_reward(lanes_count)
                 # self.reward_count += 1
-                self.action, self.green_time = self.act(eng, time)
+                self.action, self.green_time = self.choose_act(eng, time)
 
                 if self.phase.ID != self.action.ID:
                     self.update_wait_time(time, self.action, self.phase, lanes_count)
@@ -45,7 +45,7 @@ class Analytical_Agent(Agent):
                 self.action_type = "act"
 
         
-    def act(self, eng, time):
+    def choose_act(self, eng, time):
         """
         selects the next action - phase for the agent to select along with the time it should stay on for
         :param eng: the cityflow simulation engine

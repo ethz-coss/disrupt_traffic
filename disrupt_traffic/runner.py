@@ -85,7 +85,6 @@ def parse_args():
 def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
 
-
 def run_exp(num_episodes, num_sim_steps):
     step = 0
     best_time = 999999
@@ -111,24 +110,62 @@ def run_exp(num_episodes, num_sim_steps):
         print("episode ", i_episode)
         done = False
 
-        environ.reset()
+        obs, info = environ.reset()
 
         t = 0
         while t < num_sim_steps:
             if t >= num_sim_steps-1:
                 done = True
 
-            environ.step(t, done, policy_mapper=policy_mapper)
+            # Dispatch the observations to the model to get the tuple of actions
+            # actions = {agent_id: policy_mapper[agent_id].act(obs_i)
+            #                     for agent_id, obs_i in obs}
+            actions = {}
+            for agent in agents:
+                agent_id = agent.ID
+                if t % agent.action_freq == 0:
+                    if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+                        act = policy_mapper(agent_id).act(torch.FloatTensor(
+                            obs[agent_id], device=device), epsilon=environ.eps)
+                    else:
+                        act = agent.choose_act(environ.eng, t)
+                else:
+                    act = None
+                actions[agent_id] = act
+
+            # Execute the actions
+            next_obs, rewards, done, truncated, info = environ.step(actions)
+
+            # environ._step(t, done, policy_mapper=policy_mapper)
             t += 1
+
+            # Update the model with the transitions observed by each agent
 
             step = (step+1) % environ.update_freq
             if step == 0 and args.mode == 'train':
                 if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
+                    for agent in agents:
+                        agent_id = agent.ID
+                        if actions[agent_id] is not None:
+                            state = torch.FloatTensor(obs[agent_id], device=device)
+                            reward = torch.tensor(
+                                [rewards[agent_id]], dtype=torch.float, device=device)
+                            done = torch.tensor(
+                                [done], dtype=torch.bool, device=device)
+                            action = torch.tensor(
+                                [actions[agent_id]], device=device)
+                            next_state = torch.FloatTensor(
+                                next_obs[agent_id], device=device)
+                            policy_mapper(agent_id).memory.add(
+                                state, action, reward, next_state, done)
+
                     tau = 1.*(environ.agents_type == 'presslight')
                     _loss = 0
                     for policy in policies:
-                        _loss += policy.optimize_model(gamma=args.gamma, tau=tau)
+                        _loss += policy.optimize_model(
+                            gamma=args.gamma, tau=tau)
                     logger.losses.append(_loss)
+            obs = next_obs
 
         if environ.agents_type in ['learning', 'hybrid', 'presslight']:
             if environ.eng.get_average_travel_time() < best_time:
@@ -149,13 +186,13 @@ def run_exp(num_episodes, num_sim_steps):
             logger.save_models(policies, flag=None)
 
         print(logger.reward, environ.eng.get_average_travel_time(),
-            environ.eng.get_finished_vehicle_count())
-
+              environ.eng.get_finished_vehicle_count())
 
     logger.save_log_file(environ)
     logger.serialise_data(environ, policies[0])
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     args = parse_args()
     logger = Logger(args)
 
@@ -176,8 +213,8 @@ if __name__=="__main__":
         raise Exception(
             f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
 
-    agent_ids = [x for x in eng.get_intersection_ids(
-    ) if not eng.is_intersection_virtual(x)]
+    agent_ids = [x for x in eng.get_intersection_ids()
+                 if not eng.is_intersection_virtual(x)]
     for agent_id in agent_ids:
         new_agent = AgentClass(environ, ID=agent_id, in_roads=eng.get_intersection_in_roads(
             agent_id), out_roads=eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
@@ -186,9 +223,12 @@ if __name__=="__main__":
 
     n_actions = len(agents[0].phases)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
-    policies = [policy]
+    if args.agents_type in ['learning', 'hybrid', 'presslight']:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
+        policies = [policy]
+    else:
+        policies = [None]
 
     num_episodes = args.num_episodes
     num_sim_steps = args.num_sim_steps

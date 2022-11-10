@@ -51,29 +51,25 @@ class Learning_Agent(Agent):
             idx+=1    
 
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, policy, done):
-        local_net = policy.net_local
-        memory = policy.memory
+    def step(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
+        # self.action = action
         if time % self.action_freq == 0:
+            reward = 0
             if self.action_type == "reward":
                 reward = self.get_reward(lanes_count)
                 self.reward = reward
                 self.total_rewards += [reward]
-                reward = torch.tensor([reward], dtype=torch.float, device=device)
-                done = torch.tensor([done], dtype=torch.bool, device=device)
-                action = torch.tensor([self.action.ID], device=device)
-                next_state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance),
-                                               device=device)
-                memory.add(self.state, action, reward, next_state, done)
                 self.action_type = "act"
 
             if self.action_type == "act":
-                self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
-                self.action = self.act(local_net, self.state, time, lanes_count, eps=eps)
+                # self.state = self.observe(eng, time, lanes_count, lane_vehs, veh_distance)
+                # self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
+                # self.action = self.choose_act(local_net, self.state, time, lanes_count, eps=eps)
+                self.chosen_phase = self.phases[action]
                 self.green_time = 10
 
                 if self.action != self.phase:
-                    self.update_wait_time(time, self.action, self.phase, lanes_count)
+                    self.update_wait_time(time, self.chosen_phase, self.phase, lanes_count)
                     self.set_phase(eng, self.clearing_phase)
                     self.action_type = "update"
                     self.action_freq = time + self.clearing_time
@@ -83,38 +79,39 @@ class Learning_Agent(Agent):
                     self.action_freq = time + self.green_time
 
             elif self.action_type == "update":
-                self.set_phase(eng, self.action)
+                self.set_phase(eng, self.chosen_phase)
                 self.action_type = "reward"
                 self.action_freq = time + self.green_time
+            return reward
 
-    def observe(self, eng, time, lanes_count, lane_vehs, vehs_distance):
-        """
-        generates the observations made by the agents
-        :param eng: the cityflow simulation engine
-        :param time: the time of the simulation
-        :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
-        """
-        observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
-        return observations
+    # def observe(self, eng, time, lanes_count, lane_vehs, vehs_distance):
+    #     """
+    #     generates the observations made by the agents
+    #     :param eng: the cityflow simulation engine
+    #     :param time: the time of the simulation
+    #     :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
+    #     """
+    #     observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
+    #     return observations
 
-    def act(self, net_local, state, lanes_count, time, eps = 0):
-        """
-        generates the action to be taken by the agent
-        :param net_local: the neural network used in the decision making process
-        :param state: the current state of the intersection, given by observe
-        :param eps: the epsilon value used in the epsilon greedy learing
-        """
-        if random.random() > eps:
-            state = state.unsqueeze(0)
-            net_local.eval()
-            with torch.no_grad():
-                action_values = net_local(state)
-            net_local.train()
+    # def choose_act(self, state, eps = 0):
+    #     """
+    #     generates the action to be taken by the agent
+    #     :param net_local: the neural network used in the decision making process
+    #     :param state: the current state of the intersection, given by observe
+    #     :param eps: the epsilon value used in the epsilon greedy learing
+    #     """
+        # if random.random() > eps:
+        #     state = state.unsqueeze(0)
+        #     net_local.eval()
+        #     with torch.no_grad():
+        #         action_values = net_local(state)
+        #     net_local.train()
 
-            action = action_values.max(1)[1].item()
-            return self.phases[action]
-        else:
-            return self.phases[random.choice(np.arange(self.n_actions))]
+        #     action = action_values.max(1)[1].item()
+        #     return self.phases[action]
+        # else:
+        #     return self.phases[random.choice(np.arange(self.n_actions))]
 
         
     def get_out_lanes_veh_num(self, eng, lanes_count):
@@ -150,9 +147,9 @@ class Learning_Agent(Agent):
                 vehs = lanes_veh[lane]
                 for veh in vehs:
                     if veh in vehs_distance.keys():
-                        if vehs_distance[veh] / length >= 0.66:
+                        if vehs_distance[veh] / length >= (2/3):
                             seg1 += 1
-                        elif vehs_distance[veh] / length >= 0.33:
+                        elif vehs_distance[veh] / length >= (1/3):
                             seg2 += 1
                         else:
                             seg3 +=1

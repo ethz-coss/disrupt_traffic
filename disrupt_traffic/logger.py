@@ -63,7 +63,7 @@ class Logger:
         self.travel_time.append(environ.eng.get_average_travel_time())
         self.episode_losses.append(np.mean(self.losses))
 
-    def serialise_data(self, environ, policy):
+    def serialise_data(self, environ, policy=None):
         """
         Serialises the waiting times data and rewards for the agents as dictionaries with agent ID as a key
         """
@@ -76,9 +76,9 @@ class Logger:
             for move in agent.movements.values():
                 waiting_time_dict[agent.ID].update(
                     {move.ID: (move.max_waiting_time, move.waiting_time_list)})
-
-        with open(os.path.join(self.log_path, "memory.dill"), "wb") as f:
-            dill.dump(policy.memory.memory, f)
+        if policy:
+            with open(os.path.join(self.log_path, "memory.dill"), "wb") as f:
+                dill.dump(policy.memory.memory, f)
 
         with open(os.path.join(self.log_path, "agent_history.dill"), "wb") as f:
             pickle.dump(environ.agent_history, f)

@@ -82,10 +82,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def policy_mapper(agent_id): return policy  # multi-agent shared policy
-
-
-def run_exp(num_episodes, num_sim_steps):
+def run_exp(num_episodes, num_sim_steps, policies, policy_mapper):
     step = 0
     best_time = 999999
     best_veh_count = 0
@@ -110,7 +107,7 @@ def run_exp(num_episodes, num_sim_steps):
         print("episode ", i_episode)
         done = False
 
-        obs, info = environ.reset()
+        obs = environ.reset()
 
         t = 0
         while t < num_sim_steps:
@@ -121,9 +118,10 @@ def run_exp(num_episodes, num_sim_steps):
             # actions = {agent_id: policy_mapper[agent_id].act(obs_i)
             #                     for agent_id, obs_i in obs}
             actions = {}
-            for agent in agents:
+            for agent in environ._agents:
                 agent_id = agent.ID
-                if t % agent.action_freq == 0:
+                if t == agent.action_freq:
+                    
                     if environ.agents_type in ['learning', 'hybrid', 'presslight']:
                         act = policy_mapper(agent_id).act(torch.FloatTensor(
                             obs[agent_id], device=device), epsilon=environ.eps)
@@ -134,37 +132,38 @@ def run_exp(num_episodes, num_sim_steps):
                 actions[agent_id] = act
 
             # Execute the actions
-            next_obs, rewards, done, truncated, info = environ.step(actions)
+            next_obs, rewards, info, dones = environ.step(actions)
+
+            # Update the model with the transitions observed by each agent
+            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
+                for agent in environ._agents:
+                    agent_id = agent.ID
+                    if rewards[agent_id] is not None:
+                        state = torch.FloatTensor(obs[agent_id], device=device)
+                        reward = torch.tensor(
+                            [rewards[agent_id]], dtype=torch.float, device=device)
+                        done = torch.tensor(
+                            [dones[agent_id]], dtype=torch.bool, device=device)
+                        action = torch.tensor(
+                            [actions[agent_id]], device=device)
+                        next_state = torch.FloatTensor(
+                            next_obs[agent_id], device=device)
+                        policy_mapper(agent_id).memory.add(
+                            state, action, reward, next_state, done)
 
             # environ._step(t, done, policy_mapper=policy_mapper)
             t += 1
 
-            # Update the model with the transitions observed by each agent
 
             step = (step+1) % environ.update_freq
             if step == 0 and args.mode == 'train':
                 if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-                    for agent in agents:
-                        agent_id = agent.ID
-                        if actions[agent_id] is not None:
-                            state = torch.FloatTensor(obs[agent_id], device=device)
-                            reward = torch.tensor(
-                                [rewards[agent_id]], dtype=torch.float, device=device)
-                            done = torch.tensor(
-                                [done], dtype=torch.bool, device=device)
-                            action = torch.tensor(
-                                [actions[agent_id]], device=device)
-                            next_state = torch.FloatTensor(
-                                next_obs[agent_id], device=device)
-                            policy_mapper(agent_id).memory.add(
-                                state, action, reward, next_state, done)
-
                     tau = 1.*(environ.agents_type == 'presslight')
                     _loss = 0
                     for policy in policies:
-                        _loss += policy.optimize_model(
+                        _loss -= policy.optimize_model(
                             gamma=args.gamma, tau=tau)
-                    logger.losses.append(_loss)
+                    logger.losses.append(-_loss)
             obs = next_obs
 
         if environ.agents_type in ['learning', 'hybrid', 'presslight']:
@@ -201,10 +200,7 @@ if __name__ == "__main__":
     else:
         n_states = 57
 
-    environ = Environment(args, n_actions=9, n_states=n_states)
-    eng = environ.eng
 
-    agents = []
     # load needed agent modules
     try:
         import_path = f"agents.{args.agents_type}_agent.{args.agents_type.capitalize()}_Agent"
@@ -213,27 +209,23 @@ if __name__ == "__main__":
         raise Exception(
             f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
 
-    agent_ids = [x for x in eng.get_intersection_ids()
-                 if not eng.is_intersection_virtual(x)]
-    for agent_id in agent_ids:
-        new_agent = AgentClass(environ, ID=agent_id, in_roads=eng.get_intersection_in_roads(
-            agent_id), out_roads=eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
-        agents.append(new_agent)
-    environ.agents = agents
-
-    n_actions = len(agents[0].phases)
+    n_actions = 9
+    environ = Environment(args, n_actions=n_actions, n_states=n_states, AgentClass=AgentClass)
 
     if args.agents_type in ['learning', 'hybrid', 'presslight']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
-        policies = [policy]
     else:
-        policies = [None]
+        print('not using a policy')
+        policy = None
+    policies = [policy]
 
     num_episodes = args.num_episodes
     num_sim_steps = args.num_sim_steps
 
-    run_exp(num_episodes, num_sim_steps)
+    def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
-    if args.mfd:
-        mfd_data = environ.get_mfd_data()
+    run_exp(num_episodes, num_sim_steps, policies, policy_mapper)
+
+    # if args.mfd:
+    #     mfd_data = environ.get_mfd_data()

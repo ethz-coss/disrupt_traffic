@@ -6,6 +6,8 @@ from agents.agent import Agent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+CAR_LENGTH = 5 #m
 class Learning_Agent(Agent):
     """
     The class defining an agent which controls the traffic lights using reinforcement learning approach called PressureLight
@@ -24,15 +26,14 @@ class Learning_Agent(Agent):
         self.init_phases_vectors(self.env.eng)
         self.n_actions = len(self.phases)
 
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # self.local_net = DQN(n_states, self.n_actions, seed=2).to(self.device)
-        # self.target_net = DQN(n_states, self.n_actions, seed=2).to(self.device)
-
-        # self.optimizer = Adam(self.local_net.parameters(), lr=lr, amsgrad=True)
-        # self.memory = ReplayMemory(self.n_actions, batch_size=batch_size)
+        self.last_act_time = -1
         self.agents_type = 'learning'
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        eng = env.eng
+        lane_vehs = env.eng.get_lane_vehicles()
+        lanes_count = env.eng.get_lane_vehicle_count()
+        vehs_distance = env.eng.get_vehicle_distance()
+        self.observation = self.observe(eng, env.time, lanes_count, lane_vehs, vehs_distance)
 
                 
     def init_phases_vectors(self, eng):
@@ -51,48 +52,53 @@ class Learning_Agent(Agent):
             idx+=1    
 
 
-    def step(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
+    def apply_action(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
         # self.action = action
-        if time % self.action_freq == 0:
-            reward = 0
-            if self.action_type == "reward":
-                reward = self.get_reward(lanes_count)
-                self.reward = reward
-                self.total_rewards += [reward]
+        if time != self.action_freq:
+            return
+
+        if self.action_type == "act":
+            self.observation = self.observe(eng, time, lanes_count, lane_vehs, veh_distance)
+            # self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
+            # self.action = self.choose_act(local_net, self.state, time, lanes_count, eps=eps)
+            self.chosen_phase = self.phases[action]
+            self.green_time = 10
+
+            if self.chosen_phase != self.phase:
+                self.update_wait_time(time, self.chosen_phase, self.phase, lanes_count)
+                self.set_phase(eng, self.clearing_phase)
+                self.action_type = "update"
+                self.action_freq = time + self.clearing_time
+                
+            else:
                 self.action_type = "act"
-
-            if self.action_type == "act":
-                # self.state = self.observe(eng, time, lanes_count, lane_vehs, veh_distance)
-                # self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
-                # self.action = self.choose_act(local_net, self.state, time, lanes_count, eps=eps)
-                self.chosen_phase = self.phases[action]
-                self.green_time = 10
-
-                if self.action != self.phase:
-                    self.update_wait_time(time, self.chosen_phase, self.phase, lanes_count)
-                    self.set_phase(eng, self.clearing_phase)
-                    self.action_type = "update"
-                    self.action_freq = time + self.clearing_time
-                    
-                else:
-                    self.action_type = "reward"
-                    self.action_freq = time + self.green_time
-
-            elif self.action_type == "update":
-                self.set_phase(eng, self.chosen_phase)
-                self.action_type = "reward"
+                self.last_act_time = time
                 self.action_freq = time + self.green_time
+
+        elif self.action_type == "update":
+            self.set_phase(eng, self.chosen_phase)
+            self.action_type = "act"
+            self.last_act_time = time
+            self.action_freq = time + self.green_time
+
+    def calculate_reward(self, lanes_count):
+        if self.env.time == (self.last_act_time+1):
+            reward = self.get_reward(lanes_count)
+                # if reward == 0: print('wala reward')
+                # self.reward = reward
+            self.total_rewards += [reward]
             return reward
 
-    # def observe(self, eng, time, lanes_count, lane_vehs, vehs_distance):
-    #     """
-    #     generates the observations made by the agents
-    #     :param eng: the cityflow simulation engine
-    #     :param time: the time of the simulation
-    #     :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
-    #     """
-    #     observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
-    #     return observations
+
+    def observe(self, eng, time, lanes_count, lane_vehs, vehs_distance):
+        """
+        generates the observations made by the agents
+        :param eng: the cityflow simulation engine
+        :param time: the time of the simulation
+        :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
+        """
+        observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
+        return observations
 
     # def choose_act(self, state, eps = 0):
     #     """

@@ -3,27 +3,32 @@ import cityflow
 import numpy as np
 import random
 import os
-
+import functools
 
 # from policy_agent import DPGN, Policy_Agent
 from engine.cityflow.intersection import Lane
-import gym
 from gym import spaces
+from gym import utils
+
+from pettingzoo.utils.env import ParallelEnv
 
 
-class Environment(gym.Env):
+class Environment(ParallelEnv, utils.EzPickle):
     """
     The class Environment represents the environment in which the agents operate in this case it is a city
     consisting of roads, lanes and intersections which are controled by the agents
     """
 
-    def __init__(self, args, ID=0, n_actions=9, n_states=44):
+    metadata = {"name": "cityflow"}
+
+    def __init__(self, args, ID=0, n_actions=9, n_states=44, AgentClass=None):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
+        utils.EzPickle.__init__(self, args, ID, n_actions, n_states, AgentClass)
         self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
@@ -37,7 +42,7 @@ class Environment(gym.Env):
 
         self.eps = self.eps_start
 
-        self.agents = []
+        self._agents = []
         self.time = 0
         random.seed(2)
 
@@ -45,23 +50,30 @@ class Environment(gym.Env):
 
         self.action_freq = 10  # typical update freq for agents
 
-        self.action_space = spaces.Dict(
-            {
+        self.possible_agents = [x for x in self.eng.get_intersection_ids()
+                 if not self.eng.is_intersection_virtual(x)]
+
+        self.agents = self.possible_agents
+        self._agents=[]
+        for agent_id in self.possible_agents:
+            new_agent = AgentClass(self, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(
+                agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
+            self._agents.append(new_agent)
+
+        self.action_spaces = spaces.Dict({
                 agent_id: spaces.Discrete(n_actions)
-                for agent_id in self.eng.get_intersection_ids() if not self.eng.is_intersection_virtual(agent_id)
-            }
-        )
-        self.observation_space = spaces.Dict(
-            {
+                for agent_id in self.possible_agents
+            })
+        self.observation_spaces = spaces.Dict({
                 agent_id: spaces.utils.flatten_space(
                                 spaces.Tuple((spaces.Box(0, 1, shape=(n_actions,), dtype=int),
-                                              spaces.Box(0, 1, shape=(48,), dtype=float)))
+                                              spaces.Box(0, 100, shape=(48,), dtype=float)))
                 )
                 # TODO: reduce observation space dimensionality
                 # agent_id: spaces.Discrete(n_actions, dtype=int)+spaces.Box(0, np.inf, shape=(48,), dtype=float)
-                for agent_id in self.eng.get_intersection_ids() if not self.eng.is_intersection_virtual(agent_id)
-            }
-        )
+                for agent_id in self.possible_agents
+            })
+
 
 
         if self.agents_type == 'cluster':
@@ -81,6 +93,14 @@ class Environment(gym.Env):
         self.speeds = []
         self.stops = []
         self.stopped = {}
+
+    @functools.lru_cache(maxsize=None)
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
+
+    @functools.lru_cache(maxsize=None)
+    def action_space(self, agent):
+        return self.action_spaces[agent]
 
     def step(self, actions):
 
@@ -121,8 +141,7 @@ class Environment(gym.Env):
             veh_distance = self.eng.get_vehicle_distance()
 
         # self._step(self, self.time, None, policy_mapper=None)
-        rewards = {}
-        for agent in self.agents:
+        for agent in self._agents:
             agent_id = agent.ID
             action = actions[agent_id]
 
@@ -134,20 +153,22 @@ class Environment(gym.Env):
                 agent.step(self.eng, self.time, lane_vehs, lanes_count, veh_distance,
                            self.eps, self.cluster_algo, self.cluster_models)
             else:
-                reward = agent.step(self.eng, action, self.time, lane_vehs, lanes_count,
+                agent.apply_action(self.eng, action, self.time, lane_vehs, lanes_count,
                            veh_distance, self.eps)
-                rewards[agent_id] = reward
 
-        if self.time % self.action_freq == 0: # TODO: move outside to training
+        if self.time % self.update_freq == 0: # TODO: move outside to training
             self.eps = max(self.eps-self.eps_decay, self.eps_end)
 
         self.eng.next_step()
         self.time += 1
-        done = self.time==self.num_sim_steps
-        info = {}
-        observations = self._get_obs()
 
-        return observations, rewards, done, False, info
+        observations = self._get_obs()
+        rewards = {agent.ID:agent.calculate_reward(lanes_count) for agent in self._agents}
+        done = {id:self.time==self.num_sim_steps if x is not None else None for id, x in observations.items()}
+        info = {id:self.time==self.num_sim_steps if x is not None else None for id, x in observations.items()}
+        info['__all__'] = None
+
+        return observations, rewards, info, done#, info
 
 
     def _get_obs(self):
@@ -162,27 +183,39 @@ class Environment(gym.Env):
         vehs_distance = self.eng.get_vehicle_distance()
 
         obs = {}
-        for agent in self.agents:
+        for agent in self._agents:
+            obs_agent = None
             if self.agents_type in ['learning', 'hybrid', 'presslight']:
-                obs[agent.ID] = np.array(agent.phase.vector + agent.get_in_lanes_veh_num(self.eng, lane_vehs, vehs_distance) + agent.get_out_lanes_veh_num(self.eng, lanes_count))
+                obs_agent = agent.observation # NOTE: observations are only updated when the agent acts
+                # obs_agent = np.array(agent.phase.vector + agent.get_in_lanes_veh_num(self.eng, lane_vehs, vehs_distance) + agent.get_out_lanes_veh_num(self.eng, lanes_count))
+            obs[agent.ID] = obs_agent
         return obs
+
+    def observe(self, agent):
+        """
+        Observe should return the observation of the specified agent. This function
+        should return a sane observation (though not necessarily the most up to date possible)
+        at any time after reset() is called.
+        """
+        # observation of one agent is the previous state of the other
+        return self._get_obs['agent']
 
 
     def reset(self, seed=None, options=None):
         """
         resets the movements amd rewards for each agent and the simulation environment, should be called after each episode
         """
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
         self.eng.reset(seed=False)
         self.time = 0
-        for agent in self.agents:
+        for agent in self._agents:
             agent.reset_movements()
             agent.total_rewards = []
             agent.action_type = 'act'
-        
+            agent.action_freq = self.action_freq
         obs = self._get_obs()
         info = {}
-        return obs, info
+        return obs#, info
 
 
     def get_mfd_data(self, time_window=60):

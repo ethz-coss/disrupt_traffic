@@ -64,7 +64,7 @@ class DQN:
             experience_sample = self.memory.sample()
             self.optimize_model(experience_sample)
 
-    def act(self, state, epsilon=0):
+    def act(self, state, epsilon=0, **kwargs):
         # Use epsilon-greedy for exploration
         if epsilon > np.random.random():
             # Take random action

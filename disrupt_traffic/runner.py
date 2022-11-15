@@ -3,6 +3,7 @@ import random
 import argparse
 
 from models.dqn import DQN
+from models.hybrid_agent import Hybrid
 from environ import Environment
 from logger import Logger
 from importlib import import_module
@@ -124,7 +125,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper):
                     
                     if environ.agents_type in ['learning', 'hybrid', 'presslight']:
                         act = policy_mapper(agent_id).act(torch.FloatTensor(
-                            obs[agent_id], device=device), epsilon=environ.eps)
+                            obs[agent_id], device=device), epsilon=environ.eps, agent=agent)
                     else:
                         act = agent.choose_act(environ.eng, t)
                 else:
@@ -214,7 +215,10 @@ if __name__ == "__main__":
 
     if args.agents_type in ['learning', 'hybrid', 'presslight']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
+        if args.agents_type=='hybrid':
+            policy = Hybrid(n_states, n_actions, seed=SEED, load=args.load)
+        else:
+            policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
     else:
         print('not using a policy')
         policy = None

@@ -26,7 +26,6 @@ class Learning_Agent(Agent):
         self.init_phases_vectors(self.env.eng)
         self.n_actions = len(self.phases)
 
-        self.last_act_time = -1
         self.agents_type = 'learning'
 
         eng = env.eng
@@ -71,7 +70,6 @@ class Learning_Agent(Agent):
                 self.action_freq = time + self.clearing_time
                 
             else:
-                self.action_type = "act"
                 self.last_act_time = time
                 self.action_freq = time + self.green_time
 

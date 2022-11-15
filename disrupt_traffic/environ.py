@@ -206,7 +206,10 @@ class Environment(ParallelEnv, utils.EzPickle):
         resets the movements amd rewards for each agent and the simulation environment, should be called after each episode
         """
         # super().reset(seed=seed)
+        if seed is None:
+            seed = random.randint(1,1e6)
         self.eng.reset(seed=False)
+        self.eng.set_random_seed(seed)
         self.time = 0
         for agent in self._agents:
             agent.reset_movements()

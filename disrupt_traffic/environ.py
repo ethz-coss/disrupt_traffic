@@ -90,9 +90,15 @@ class Environment(ParallelEnv, utils.EzPickle):
         for lane_id in self.eng.get_lane_vehicles().keys():
             self.lanes[lane_id] = Lane(self.eng, ID=lane_id)
 
+        # metrics
         self.speeds = []
         self.stops = []
+        self.waiting_times = []
         self.stopped = {}
+
+        # for detailed logging. DO NOT USE WHEN TRAINING
+        self.vehicles = {}
+        self.prev_vehs = set()
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
@@ -119,10 +125,11 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         for veh_id, speed in veh_speeds.items():
 
-            if speed <= 0.1 and veh_id not in self.stopped.keys():
-                self.stopped.update({veh_id: 1})
-                stops += 1
+            if speed <= 0.1:
+                veh_stop = self.stopped.setdefault(veh_id, 0) + 1
+                if veh_stop==1: stops += 1 # first stop
             elif speed > 0.1 and veh_id in self.stopped.keys():
+                self.waiting_times.append(self.stopped[veh_id])
                 self.stopped.pop(veh_id)
 
         self.speeds.append(np.mean(list(veh_speeds.values())))
@@ -209,6 +216,14 @@ class Environment(ParallelEnv, utils.EzPickle):
             agent.total_rewards = []
             agent.action_type = 'act'
             agent.action_freq = self.action_freq
+
+        self.speeds = []
+        self.stops = []
+        self.waiting_times = []
+        self.stopped = {}
+        self.vehicles = {}
+        self.previous_vehs = set()
+
         obs = self._get_obs()
         info = {}
         return obs#, info
@@ -242,6 +257,26 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         return mfd_detailed
 
+    def detailed_log(self):
+        current_vehs = set(self.eng.get_vehicles())
+        finished_vehs = self.prev_vehs - current_vehs
+        new_vehs = current_vehs - self.prev_vehs
+
+        # for veh_id in current_vehs:
+        #     veh_info = self.vehicles[veh_id]
+        #     veh_info[]
+
+        for veh_id in finished_vehs:
+            veh_info = self.vehicles[veh_id]
+            veh_info['end_time'] = self.time
+            # veh_info['stops'] = 
+
+        for veh_id in new_vehs:            
+            veh_info = self.vehicles.setdefault(veh_id, {})
+            veh_info['flow_id'] = veh_id.rsplit('_', 1)[0]
+            veh_info['start_time'] = self.time
+
+        self.prev_vehs = current_vehs
 
 def get_mfd_data(time, lanes_count, lanes):
     # TODO: revise/remove

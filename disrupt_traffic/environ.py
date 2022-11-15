@@ -217,12 +217,12 @@ class Environment(ParallelEnv, utils.EzPickle):
             agent.action_type = 'act'
             agent.action_freq = self.action_freq
 
-        self.speeds = []
-        self.stops = []
+        # self.speeds = []
+        # self.stops = []
         self.waiting_times = []
         self.stopped = {}
         self.vehicles = {}
-        self.previous_vehs = set()
+        self.prev_vehs = set()
 
         obs = self._get_obs()
         info = {}

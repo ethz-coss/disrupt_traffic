@@ -6,7 +6,7 @@ import torch
 import random
 import pickle
 import dill
-
+from network_parser import get_network
 
 class Logger:
     """
@@ -26,6 +26,8 @@ class Logger:
         self.losses = []
         self.plot_rewards = []
         self.episode_losses = []
+        self.delays = []
+        self.travel_times = []
 
         self.reward = 0
 
@@ -63,6 +65,24 @@ class Logger:
         self.travel_time.append(environ.eng.get_average_travel_time())
         self.episode_losses.append(np.mean(self.losses))
 
+    def log_delays(self, config, environ):
+        network, roads, flows = get_network(config)
+        delays = []
+        travel_times = []
+        for veh_id, veh_data in environ.vehicles.items():
+            if 'end_time' in veh_data.keys():
+                tt = veh_data['end_time'] - veh_data['start_time']
+            else:
+                tt = environ.time - veh_data['start_time']
+            flow_id = veh_data['flow_id']
+            delay = (tt - flows[flow_id]['freeflow_time'])/flows[flow_id]['routelength']*1000 # secs/km
+            delays.append(delay)
+            travel_times.append(tt)
+        self.delays.append(delays)
+        self.travel_times.append(travel_times)
+        return delays, travel_times
+        # np.mean(delays), np.mean(travel_times)
+
     def serialise_data(self, environ, policy=None):
         """
         Serialises the waiting times data and rewards for the agents as dictionaries with agent ID as a key
@@ -95,6 +115,12 @@ class Logger:
             pickle.dump(environ.stops, f)
         with open(os.path.join(self.log_path, "speeds.pickle"), "wb") as f:
             pickle.dump(environ.speeds, f)
+
+        with open(os.path.join(self.log_path, "delays.pickle"), "wb") as f:
+            pickle.dump(self.delays, f)
+
+        with open(os.path.join(self.log_path, "travel_times.pickle"), "wb") as f:
+            pickle.dump(self.travel_times, f)
 
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:

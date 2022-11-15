@@ -83,7 +83,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_exp(num_episodes, num_sim_steps, policies, policy_mapper):
+def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=False):
     step = 0
     best_time = 999999
     best_veh_count = 0
@@ -135,6 +135,9 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper):
             # Execute the actions
             next_obs, rewards, info, dones = environ.step(actions)
 
+            if detailed_log:
+                environ.detailed_log()
+
             # Update the model with the transitions observed by each agent
             if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
                 for agent in environ._agents:
@@ -179,7 +182,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper):
                 environ.best_epoch = i_episode
 
         logger.log_measures(environ)
-
+        logger.log_delays(args.sim_config, environ)
         if environ.agents_type in ['learning', 'hybrid', 'presslight']:
             # if logger.reward > best_reward:
             best_reward = logger.reward
@@ -229,7 +232,8 @@ if __name__ == "__main__":
 
     def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
-    run_exp(num_episodes, num_sim_steps, policies, policy_mapper)
+    detailed_log = args.mode=='test'
+    run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
 
     # if args.mfd:
     #     mfd_data = environ.get_mfd_data()

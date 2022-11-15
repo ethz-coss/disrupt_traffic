@@ -104,8 +104,7 @@ class Environment(ParallelEnv, utils.EzPickle):
 
     def step(self, actions):
 
-        veh_ids = self.eng.get_vehicles()
-        speeds = []
+        veh_speeds = self.eng.get_vehicle_speed()
         stops = 0
 
         lane_vehs = self.eng.get_lane_vehicles()
@@ -116,15 +115,9 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         for lane_id, lane in self.lanes.items():
             lane.update_flow_data(self.eng, lane_vehs)
-            lane.update_speeds(self, lane_vehs[lane_id])
+            lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
 
-        for veh_id in veh_ids:
-            veh_info = self.eng.get_vehicle_info(veh_id)
-            speed = float(veh_info['speed'])
-            veh_lane = veh_info['drivable']
-            speeds.append(speed)
-            if veh_lane in self.lanes:
-                self.lanes[veh_lane].speeds[-1].append(speed)
+        for veh_id, speed in veh_speeds.items():
 
             if speed <= 0.1 and veh_id not in self.stopped.keys():
                 self.stopped.update({veh_id: 1})
@@ -132,7 +125,7 @@ class Environment(ParallelEnv, utils.EzPickle):
             elif speed > 0.1 and veh_id in self.stopped.keys():
                 self.stopped.pop(veh_id)
 
-        self.speeds.append(np.mean(speeds))
+        self.speeds.append(np.mean(list(veh_speeds.values())))
         self.stops.append(stops)
 
 

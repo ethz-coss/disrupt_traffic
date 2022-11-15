@@ -121,7 +121,7 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         for lane_id, lane in self.lanes.items():
             lane.update_flow_data(self.eng, lane_vehs)
-            lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
+            # lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
 
         for veh_id, speed in veh_speeds.items():
 

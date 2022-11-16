@@ -8,7 +8,8 @@ class Demand_Agent(Agent):
         self.agents_type = 'demand'
 
 
-    def act(self, lanes_count):
+    def choose_act(self, eng, time):
+        lanes_count = eng.get_lane_vehicle_count() # quick hack
         phases_priority = {}
         for phase in self.phases.values():
             priority = 0
@@ -17,5 +18,7 @@ class Demand_Agent(Agent):
 
             phases_priority.update({phase.ID : priority})
 
-        return self.phases[max(phases_priority.items(), key=operator.itemgetter(1))[0]]
-      
+        return max(phases_priority.items(), key=operator.itemgetter(1))[0]
+
+    def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
+        return None      

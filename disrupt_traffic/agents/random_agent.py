@@ -9,10 +9,9 @@ class Random_Agent(Fixed_Agent):
         super().__init__(env, ID)
         self.agents_type = 'random'
     
-    def act(self, lanes_count):
+    def choose_act(self, eng, time):
         """
         selects a random phase
-        :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
         phaseID = random.randint(1, len(self.phases))
-        return self.phases[phaseID]
+        return phaseID

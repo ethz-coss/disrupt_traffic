@@ -180,7 +180,7 @@ class Agent:
         for movement in self.movements.values():
             movement.update_wait_time(time, action, phase, lanes_count)
             
-    def reset_movements(self):
+    def reset(self):
         """
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
@@ -195,8 +195,12 @@ class Agent:
             move.max_waiting_time = 0
             move.waiting_time_list = []
             move.arr_rate = 0
+        self.total_rewards = []
+        self.last_act_time = -1
+        self.action_type = 'act'
+        
 
-            
+
     def update_priority_idx(self, time):
         """
         Updates the priority of the movements of the intersection, the higher priority the more the movement needs to get a green lights

@@ -211,8 +211,7 @@ class Lane:
         
 
     def update_speeds(self, environ, veh_ids, speeds):
-        self.speeds.append([speeds[id] for id in veh_ids])
-
+        self.speeds.append([speeds[id] for id in veh_ids if 'shadow' not in id])
 
 
     def update_flow_data(self, eng, lanes_vehs):

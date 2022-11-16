@@ -121,7 +121,7 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         for lane_id, lane in self.lanes.items():
             lane.update_flow_data(self.eng, lane_vehs)
-            # lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
+            lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
 
         for veh_id, speed in veh_speeds.items():
 
@@ -212,10 +212,14 @@ class Environment(ParallelEnv, utils.EzPickle):
         self.eng.set_random_seed(seed)
         self.time = 0
         for agent in self._agents:
-            agent.reset_movements()
-            agent.total_rewards = []
-            agent.action_type = 'act'
+            agent.reset()
             agent.action_freq = self.action_freq
+
+        for lane_id, lane in self.lanes.items():
+            lane.speeds = []
+            lane.dep_vehs_num = []
+            lane.arr_vehs_num = []
+            lane.prev_vehs = set()
 
         # self.speeds = []
         # self.stops = []

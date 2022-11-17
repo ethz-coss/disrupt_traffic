@@ -68,8 +68,6 @@ class DQN:
         # Use epsilon-greedy for exploration
         if epsilon > np.random.random():
             # Take random action
-            # action = torch.tensor(np.random.choice(
-            #     self.num_actions), device=device).view(1, 1)
             action = np.random.choice(self.num_actions)
         else:
             state = state.unsqueeze(0)
@@ -80,7 +78,6 @@ class DQN:
                 # Take best action
             self.net_local.train()
             action = action_probs.max(1)[1].item()
-
         return action
 
     def optimize_model(self, gamma=GAMMA, tau=TAU, criterion=None):

@@ -159,7 +159,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
                                 action_probs[agent_id], dtype=torch.float, device=device)
                         else:    
                             action = torch.tensor(
-                                [actions[agent_id]], dtype=torch.int, device=device)
+                                [actions[agent_id]], device=device)
                         next_state = torch.FloatTensor(
                             next_obs[agent_id], device=device)
                         policy_mapper(agent_id).memory.add(

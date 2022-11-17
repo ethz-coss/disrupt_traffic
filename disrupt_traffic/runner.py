@@ -4,6 +4,7 @@ import argparse
 
 from models.dqn import DQN
 from models.hybrid_agent import Hybrid
+from models.sac import SAC
 from environ import Environment
 from logger import Logger
 from importlib import import_module
@@ -46,7 +47,8 @@ def parse_args():
                         help="the number of simulation steps, one step corresponds to 1 second")
     parser.add_argument("--agents_type", default='analytical', type=str,
                         help="the type of agents learning/policy/analytical/hybrid/demand")
-
+    parser.add_argument("--rl_model", default='dqn', type=str,
+                        help="rl algorithm used, defaults to deep Q-learning")
     parser.add_argument("--update_freq", default=10, type=int,
                         help="the frequency of the updates (training pass) of the deep-q-network, default=10")
     parser.add_argument("--batch_size", default=64, type=int,
@@ -119,6 +121,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
             # actions = {agent_id: policy_mapper[agent_id].act(obs_i)
             #                     for agent_id, obs_i in obs}
             actions = {}
+            action_probs = {}
             for agent in environ._agents:
                 agent_id = agent.ID
                 if t == agent.action_freq:
@@ -130,6 +133,9 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
                         act = agent.choose_act(environ.eng, t)
                 else:
                     act = None
+                if isinstance(act, np.ndarray):
+                    action_probs[agent_id] = act
+                    act = np.argmax(act)
                 actions[agent_id] = act
 
             # Execute the actions
@@ -148,8 +154,12 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
                             [rewards[agent_id]], dtype=torch.float, device=device)
                         done = torch.tensor(
                             [dones[agent_id]], dtype=torch.bool, device=device)
-                        action = torch.tensor(
-                            [actions[agent_id]], device=device)
+                        if args.rl_model=='sac':
+                            action = torch.tensor(
+                                action_probs[agent_id], dtype=torch.float, device=device)
+                        else:    
+                            action = torch.tensor(
+                                [actions[agent_id]], dtype=torch.int, device=device)
                         next_state = torch.FloatTensor(
                             next_obs[agent_id], device=device)
                         policy_mapper(agent_id).memory.add(
@@ -221,7 +231,10 @@ if __name__ == "__main__":
         if args.agents_type=='hybrid':
             policy = Hybrid(n_states, n_actions, seed=SEED, load=args.load)
         else:
-            policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
+            if args.rl_model=='sac':
+                policy = SAC(n_states, n_actions, seed=SEED, load=args.load)
+            else:
+                policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
     else:
         print('not using a policy')
         policy = None

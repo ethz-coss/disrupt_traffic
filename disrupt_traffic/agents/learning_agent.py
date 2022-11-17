@@ -51,34 +51,6 @@ class Learning_Agent(Agent):
             idx+=1    
 
 
-    def apply_action(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
-        # self.action = action
-        if time != self.action_freq:
-            return
-
-        if self.action_type == "act":
-            self.observation = self.observe(eng, time, lanes_count, lane_vehs, veh_distance)
-            # self.state = torch.FloatTensor(self.observe(eng, time, lanes_count, lane_vehs, veh_distance), device=device)
-            # self.action = self.choose_act(local_net, self.state, time, lanes_count, eps=eps)
-            self.chosen_phase = self.phases[action]
-            self.green_time = 10
-
-            if self.chosen_phase != self.phase:
-                self.update_wait_time(time, self.chosen_phase, self.phase, lanes_count)
-                self.set_phase(eng, self.clearing_phase)
-                self.action_type = "update"
-                self.action_freq = time + self.clearing_time
-                
-            else:
-                self.last_act_time = time
-                self.action_freq = time + self.green_time
-
-        elif self.action_type == "update":
-            self.set_phase(eng, self.chosen_phase)
-            self.action_type = "act"
-            self.last_act_time = time
-            self.action_freq = time + self.green_time
-
     def calculate_reward(self, lanes_count):
         if self.env.time == (self.last_act_time+1):
             reward = self.get_reward(lanes_count)
@@ -97,25 +69,6 @@ class Learning_Agent(Agent):
         """
         observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
         return observations
-
-    # def choose_act(self, state, eps = 0):
-    #     """
-    #     generates the action to be taken by the agent
-    #     :param net_local: the neural network used in the decision making process
-    #     :param state: the current state of the intersection, given by observe
-    #     :param eps: the epsilon value used in the epsilon greedy learing
-    #     """
-        # if random.random() > eps:
-        #     state = state.unsqueeze(0)
-        #     net_local.eval()
-        #     with torch.no_grad():
-        #         action_values = net_local(state)
-        #     net_local.train()
-
-        #     action = action_values.max(1)[1].item()
-        #     return self.phases[action]
-        # else:
-        #     return self.phases[random.choice(np.arange(self.n_actions))]
 
         
     def get_out_lanes_veh_num(self, eng, lanes_count):

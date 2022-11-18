@@ -5,7 +5,6 @@ import random
 import os
 import functools
 
-# from policy_agent import DPGN, Policy_Agent
 from engine.cityflow.intersection import Lane
 from gym import spaces
 from gym import utils
@@ -28,7 +27,8 @@ class Environment(ParallelEnv, utils.EzPickle):
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
-        utils.EzPickle.__init__(self, args, ID, n_actions, n_states, AgentClass)
+        utils.EzPickle.__init__(
+            self, args, ID, n_actions, n_states, AgentClass)
         self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
@@ -46,35 +46,42 @@ class Environment(ParallelEnv, utils.EzPickle):
         self.time = 0
         random.seed(2)
 
+        self.lane_vehs = self.eng.get_lane_vehicles()
+        self.lanes_count = self.eng.get_lane_vehicle_count()
+
         self.agents_type = args.agents_type
 
         self.action_freq = 10  # typical update freq for agents
 
         self.possible_agents = [x for x in self.eng.get_intersection_ids()
-                 if not self.eng.is_intersection_virtual(x)]
+                                if not self.eng.is_intersection_virtual(x)]
 
         self.agents = self.possible_agents
-        self._agents=[]
+        self._agents = []
         for agent_id in self.possible_agents:
             new_agent = AgentClass(self, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(
                 agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
             self._agents.append(new_agent)
 
         self.action_spaces = spaces.Dict({
-                agent_id: spaces.Discrete(n_actions)
-                for agent_id in self.possible_agents
-            })
-        self.observation_spaces = spaces.Dict({
-                agent_id: spaces.utils.flatten_space(
-                                spaces.Tuple((spaces.Box(0, 1, shape=(n_actions,), dtype=int),
-                                              spaces.Box(0, 100, shape=(48,), dtype=float)))
-                )
-                # TODO: reduce observation space dimensionality
-                # agent_id: spaces.Discrete(n_actions, dtype=int)+spaces.Box(0, np.inf, shape=(48,), dtype=float)
-                for agent_id in self.possible_agents
-            })
+            agent_id: spaces.Discrete(n_actions)
+            for agent_id in self.possible_agents
+        })
+        self.observation_spaces = {
+            agent_id: spaces.utils.flatten_space(
+                spaces.Tuple((spaces.Box(0, 1, shape=(n_actions,), dtype=int),
+                              spaces.Box(0, 100, shape=(48,), dtype=float)))
+            )
+            # TODO: reduce observation space dimensionality
+            # agent_id: spaces.Discrete(n_actions, dtype=int)+spaces.Box(0, np.inf, shape=(48,), dtype=float)
+            for agent_id in self.possible_agents
+        }
 
-
+        self.observations = {
+            agent_id: None for agent_id in self.possible_agents}
+        self.actions = {agent_id: None for agent_id in self.possible_agents}
+        self.action_probs = {
+            agent_id: None for agent_id in self.possible_agents}
 
         if self.agents_type == 'cluster':
             self.cluster_models = Cluster_Models(
@@ -109,67 +116,61 @@ class Environment(ParallelEnv, utils.EzPickle):
         return self.action_spaces[agent]
 
     def step(self, actions):
+        self._apply_actions(actions)
+        self.sub_steps()
 
-        veh_speeds = self.eng.get_vehicle_speed()
-        stops = 0
-
-        lane_vehs = self.eng.get_lane_vehicles()
-        lanes_count = self.eng.get_lane_vehicle_count()
-
-        self.flow = []
-        self.density = []
-
-        for lane_id, lane in self.lanes.items():
-            lane.update_flow_data(self.eng, lane_vehs)
-            lane.update_speeds(self, lane_vehs[lane_id], veh_speeds)
-
-        for veh_id, speed in veh_speeds.items():
-
-            if speed <= 0.1:
-                veh_stop = self.stopped.setdefault(veh_id, 0) + 1
-                if veh_stop==1: stops += 1 # first stop
-            elif speed > 0.1 and veh_id in self.stopped.keys():
-                self.waiting_times.append(self.stopped[veh_id])
-                self.stopped.pop(veh_id)
-
-        self.speeds.append(np.mean(list(veh_speeds.values())))
-        self.stops.append(stops)
-
-
-        veh_distance = 0
-        if self.agents_type == "hybrid" or self.agents_type == "learning" or self.agents_type == 'cluster' or self.agents_type == 'presslight':
-            veh_distance = self.eng.get_vehicle_distance()
-
-        # self._step(self, self.time, None, policy_mapper=None)
-        for agent in self._agents:
-            agent_id = agent.ID
-            action = actions[agent_id]
-
-            # if policy_mapper:
-            #     policy = policy_mapper(agent.ID)
-            # else:
-            #     policy = None
-            if agent.agents_type == "cluster":
-                agent.step(self.eng, self.time, lane_vehs, lanes_count, veh_distance,
-                           self.eps, self.cluster_algo, self.cluster_models)
-            else:
-                agent.apply_action(self.eng, action, self.time, lane_vehs, lanes_count,
-                           veh_distance, self.eps)
-
-        if self.time % self.update_freq == 0: # TODO: move outside to training
-            self.eps = max(self.eps-self.eps_decay, self.eps_end)
-
-        self.eng.next_step()
-        self.time += 1
-
+        rewards = {agent.ID: agent.calculate_reward(self.lanes_count) for agent in self._agents
+                   if agent.time_to_act}
         observations = self._get_obs()
-        rewards = {agent.ID:agent.calculate_reward(lanes_count) for agent in self._agents}
-        done = {id:self.time==self.num_sim_steps if x is not None else None for id, x in observations.items()}
-        info = {id:self.time==self.num_sim_steps if x is not None else None for id, x in observations.items()}
-        info['__all__'] = None
+        info = {}
+        dones = {a.ID: self.time == self.num_sim_steps for a in self._agents}
+        dones['__all__'] = None
 
-        return observations, rewards, info, done#, info
+        return observations, rewards, dones, info
 
+    def sub_steps(self):
+        time_to_act = False
+        while not time_to_act:
+            self.eng.next_step()
+            self.time += 1
+
+            stops = 0
+            veh_speeds = self.eng.get_vehicle_speed()
+            self.lane_vehs = self.eng.get_lane_vehicles()
+            self.lanes_count = self.eng.get_lane_vehicle_count()
+
+            for lane_id, lane in self.lanes.items():
+                lane.update_flow_data(self.eng, self.lane_vehs)
+                lane.update_speeds(self, self.lane_vehs[lane_id], veh_speeds)
+
+            for veh_id, speed in veh_speeds.items():
+                if speed <= 0.1:
+                    veh_stop = self.stopped.setdefault(veh_id, 0) + 1
+                    if veh_stop == 1:
+                        stops += 1  # first stop
+                elif speed > 0.1 and veh_id in self.stopped.keys():
+                    self.waiting_times.append(self.stopped[veh_id])
+                    self.stopped.pop(veh_id)
+
+            self.speeds.append(np.mean(list(veh_speeds.values())))
+            self.stops.append(stops)
+
+            if self.time % self.update_freq == 0:  # TODO: move outside to training
+                self.eps = max(self.eps-self.eps_decay, self.eps_end)
+
+            for agent in self._agents:
+                if agent.agents_type == "cluster":
+                    raise NotImplementedError
+                agent.update()
+                if agent.time_to_act:
+                    time_to_act = True
+
+    def _apply_actions(self, actions):
+        for agent in self._agents:
+            if agent.time_to_act:
+                action = actions[agent.ID]
+                agent.apply_action(self.eng, action, self.time,
+                                   self.lane_vehs, self.lanes_count)
 
     def _get_obs(self):
         """
@@ -178,18 +179,11 @@ class Environment(ParallelEnv, utils.EzPickle):
         :param time: the time of the simulation
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
-        lane_vehs = self.eng.get_lane_vehicles()
-        lanes_count = self.eng.get_lane_vehicle_count()
         vehs_distance = self.eng.get_vehicle_distance()
 
-        obs = {}
-        for agent in self._agents:
-            obs_agent = None
-            if self.agents_type in ['learning', 'hybrid', 'presslight']:
-                obs_agent = agent.observation # NOTE: observations are only updated when the agent acts
-                # obs_agent = np.array(agent.phase.vector + agent.get_in_lanes_veh_num(self.eng, lane_vehs, vehs_distance) + agent.get_out_lanes_veh_num(self.eng, lanes_count))
-            obs[agent.ID] = obs_agent
-        return obs
+        self.observations.update({agent.ID: agent.observe(
+            vehs_distance) for agent in self._agents if agent.time_to_act})
+        return self.observations.copy()
 
     def observe(self, agent):
         """
@@ -197,9 +191,7 @@ class Environment(ParallelEnv, utils.EzPickle):
         should return a sane observation (though not necessarily the most up to date possible)
         at any time after reset() is called.
         """
-        # observation of one agent is the previous state of the other
         return self._get_obs['agent']
-
 
     def reset(self, seed=None, options=None):
         """
@@ -207,13 +199,13 @@ class Environment(ParallelEnv, utils.EzPickle):
         """
         # super().reset(seed=seed)
         if seed is None:
-            seed = random.randint(1,1e6)
+            seed = random.randint(1, 1e6)
         self.eng.reset(seed=False)
         self.eng.set_random_seed(seed)
         self.time = 0
         for agent in self._agents:
             agent.reset()
-            agent.action_freq = self.action_freq
+            agent.next_act_time = self.action_freq
 
         for lane_id, lane in self.lanes.items():
             lane.speeds = []
@@ -221,6 +213,8 @@ class Environment(ParallelEnv, utils.EzPickle):
             lane.arr_vehs_num = []
             lane.prev_vehs = set()
 
+        self.lane_vehs = self.eng.get_lane_vehicles()
+        self.lanes_count = self.eng.get_lane_vehicle_count()
         # self.speeds = []
         # self.stops = []
         self.waiting_times = []
@@ -230,31 +224,31 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         obs = self._get_obs()
         info = {}
-        return obs#, info
-
+        return obs
 
     def get_mfd_data(self, time_window=60):
         mfd_detailed = {}
 
         for lane_id in self.eng.get_lane_vehicles().keys():
             mfd_detailed[lane_id] = {"speed": [], "density": []}
-                    
+
         data = mfd_detailed[lane_id]
 
         for lane_id, lane in self.lanes.items():
             data = mfd_detailed[lane_id]
             speed = data['speed']
             density = data['density']
-            
+
         #     _lanespeeds = sum(lane.speeds, [])
-            _lanedensity = np.subtract(lane.arr_vehs_num, lane.dep_vehs_num).cumsum()
+            _lanedensity = np.subtract(
+                lane.arr_vehs_num, lane.dep_vehs_num).cumsum()
             for t in range(3600):
                 time_window = min(time_window, t+1)
                 idx_start = t
                 idx_end = t+time_window
 
                 s = np.mean(sum(lane.speeds[idx_start:idx_end], []))
-                d = _lanedensity[idx_start:idx_end].mean() / lane.length 
+                d = _lanedensity[idx_start:idx_end].mean() / lane.length
 
                 speed.append(s)
                 density.append(d)
@@ -273,14 +267,15 @@ class Environment(ParallelEnv, utils.EzPickle):
         for veh_id in finished_vehs:
             veh_info = self.vehicles[veh_id]
             veh_info['end_time'] = self.time
-            # veh_info['stops'] = 
+            # veh_info['stops'] =
 
-        for veh_id in new_vehs:            
+        for veh_id in new_vehs:
             veh_info = self.vehicles.setdefault(veh_id, {})
             veh_info['flow_id'] = veh_id.rsplit('_', 1)[0]
             veh_info['start_time'] = self.time
 
         self.prev_vehs = current_vehs
+
 
 def get_mfd_data(time, lanes_count, lanes):
     # TODO: revise/remove

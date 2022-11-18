@@ -20,5 +20,5 @@ class Demand_Agent(Agent):
 
         return max(phases_priority.items(), key=operator.itemgetter(1))[0]
 
-    def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
+    def observe(self, veh_distance):
         return None      

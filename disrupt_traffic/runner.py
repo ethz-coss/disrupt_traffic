@@ -112,52 +112,51 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
 
         obs = environ.reset()
 
-        t = 0
-        while t < num_sim_steps:
-            if t >= num_sim_steps-1:
+        while environ.time < num_sim_steps:
+            if environ.time >= num_sim_steps-1:
                 done = True
 
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {agent_id: policy_mapper[agent_id].act(obs_i)
             #                     for agent_id, obs_i in obs}
-            actions = {}
-            action_probs = {}
+
+            actions = environ.actions  # .copy()
+            action_probs = environ.action_probs
             for agent in environ._agents:
                 agent_id = agent.ID
-                if t == agent.action_freq:
-                    
+                act = None
+                if agent.time_to_act:
+
                     if environ.agents_type in ['learning', 'hybrid', 'presslight']:
                         act = policy_mapper(agent_id).act(torch.FloatTensor(
                             obs[agent_id], device=device), epsilon=environ.eps, agent=agent)
                     else:
-                        act = agent.choose_act(environ.eng, t)
-                else:
-                    act = None
+                        act = agent.choose_act(environ.eng, environ.time)
                 if isinstance(act, np.ndarray):
                     action_probs[agent_id] = act
                     act = np.argmax(act)
-                actions[agent_id] = act
+                if act is not None:
+                    actions[agent_id] = act
 
             # Execute the actions
-            next_obs, rewards, info, dones = environ.step(actions)
+            next_obs, rewards, dones, info = environ.step(actions)
 
             if detailed_log:
                 environ.detailed_log()
 
             # Update the model with the transitions observed by each agent
-            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-                for agent in environ._agents:
-                    agent_id = agent.ID
-                    if rewards[agent_id] is not None:
+            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15:
+                for agent_id in rewards.keys():
+                    if rewards[agent_id]:
                         state = torch.FloatTensor(obs[agent_id], device=device)
                         reward = torch.tensor(
                             [rewards[agent_id]], dtype=torch.float, device=device)
                         done = torch.tensor(
                             [dones[agent_id]], dtype=torch.bool, device=device)
-                        if args.rl_model=='sac':
+                        if args.rl_model == 'sac':
                             action = torch.tensor(
                                 action_probs[agent_id], dtype=torch.float, device=device)
-                        else:    
+                        else:
                             action = torch.tensor(
                                 [actions[agent_id]], device=device)
                         next_state = torch.FloatTensor(
@@ -165,19 +164,16 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
                         policy_mapper(agent_id).memory.add(
                             state, action, reward, next_state, done)
 
-            # environ._step(t, done, policy_mapper=policy_mapper)
-            t += 1
-
-
-            step = (step+1) % environ.update_freq
+            step = (step+1) % 1  # environ.update_freq
             if step == 0 and args.mode == 'train':
                 if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-                    tau = 1.*(environ.agents_type == 'presslight')
+                    tau = 1e-3
                     _loss = 0
                     for policy in policies:
                         _loss -= policy.optimize_model(
                             gamma=args.gamma, tau=tau)
                     logger.losses.append(-_loss)
+                    # environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
             obs = next_obs
 
         if environ.agents_type in ['learning', 'hybrid', 'presslight']:
@@ -214,7 +210,6 @@ if __name__ == "__main__":
     else:
         n_states = 57
 
-
     # load needed agent modules
     try:
         import_path = f"agents.{args.agents_type}_agent.{args.agents_type.capitalize()}_Agent"
@@ -224,14 +219,15 @@ if __name__ == "__main__":
             f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
 
     n_actions = 9
-    environ = Environment(args, n_actions=n_actions, n_states=n_states, AgentClass=AgentClass)
+    environ = Environment(args, n_actions=n_actions,
+                          n_states=n_states, AgentClass=AgentClass)
 
     if args.agents_type in ['learning', 'hybrid', 'presslight']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if args.agents_type=='hybrid':
+        if args.agents_type == 'hybrid':
             policy = Hybrid(n_states, n_actions, seed=SEED, load=args.load)
         else:
-            if args.rl_model=='sac':
+            if args.rl_model == 'sac':
                 policy = SAC(n_states, n_actions, seed=SEED, load=args.load)
             else:
                 policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
@@ -245,7 +241,7 @@ if __name__ == "__main__":
 
     def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
-    detailed_log = args.mode=='test'
+    detailed_log = args.mode == 'test'
     run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
 
     # if args.mfd:

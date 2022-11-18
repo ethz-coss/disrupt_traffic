@@ -7,11 +7,14 @@ from agents.agent import Agent
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-CAR_LENGTH = 5 #m
+CAR_LENGTH = 5  # m
+
+
 class Learning_Agent(Agent):
     """
     The class defining an agent which controls the traffic lights using reinforcement learning approach called PressureLight
     """
+
     def __init__(self, env, ID='', in_roads=[], out_roads=[], n_states=0, lr=None, batch_size=None):
         """
         initialises the Learning Agent
@@ -28,13 +31,9 @@ class Learning_Agent(Agent):
 
         self.agents_type = 'learning'
 
-        eng = env.eng
-        lane_vehs = env.eng.get_lane_vehicles()
-        lanes_count = env.eng.get_lane_vehicle_count()
         vehs_distance = env.eng.get_vehicle_distance()
-        self.observation = self.observe(eng, env.time, lanes_count, lane_vehs, vehs_distance)
+        self.observation = self.observe(vehs_distance)
 
-                
     def init_phases_vectors(self, eng):
         """
         initialises vector representation of the phases
@@ -48,36 +47,29 @@ class Learning_Agent(Agent):
             if idx != 0:
                 vec[idx-1] = 1
             phase.vector = vec.tolist()
-            idx+=1    
+            idx += 1
 
-
-    def calculate_reward(self, lanes_count):
-        if self.env.time == (self.last_act_time+1):
-            reward = self.get_reward(lanes_count)
-                # if reward == 0: print('wala reward')
-                # self.reward = reward
-            self.total_rewards += [reward]
-            return reward
-
-
-    def observe(self, eng, time, lanes_count, lane_vehs, vehs_distance):
+    def observe(self, vehs_distance):
         """
         generates the observations made by the agents
         :param eng: the cityflow simulation engine
         :param time: the time of the simulation
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
-        observations = self.phase.vector + self.get_in_lanes_veh_num(eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
-        return observations
+        eng = self.env.eng
+        lane_vehs = self.env.lane_vehs
+        lanes_count = self.env.lanes_count
+        observations = self.phase.vector + self.get_in_lanes_veh_num(
+            eng, lane_vehs, vehs_distance) + self.get_out_lanes_veh_num(eng, lanes_count)
+        return np.array(observations)
 
-        
     def get_out_lanes_veh_num(self, eng, lanes_count):
         """
         gets the number of vehicles on the outgoing lanes of the intersection
         :param eng: the cityflow simulation engine
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
-        lanes_veh_num = []            
+        lanes_veh_num = []
         for road in self.out_roads:
             lanes = eng.get_road_lanes(road)
             for lane in lanes:
@@ -109,12 +101,10 @@ class Learning_Agent(Agent):
                         elif vehs_distance[veh] / length >= (1/3):
                             seg2 += 1
                         else:
-                            seg3 +=1
-     
+                            seg3 += 1
+
                 lanes_veh_num.append(seg1 * (5 / (length/3)))
                 lanes_veh_num.append(seg2 * (5 / (length/3)))
                 lanes_veh_num.append(seg3 * (5 / (length/3)))
 
-
         return lanes_veh_num
-

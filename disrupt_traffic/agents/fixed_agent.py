@@ -70,15 +70,15 @@ class Fixed_Agent(Agent):
         return phaseID
       
 
-    def apply_action(self, eng, action, time, lane_vehs, lanes_count, veh_distance, eps):
+    def apply_action(self, eng, action, time, lane_vehs, lanes_count):
         """
         represents a single step of the simulation for the analytical agent
         :param time: the current timestep
         :param done: flag indicating weather this has been the last step of the episode, used for learning, here for interchangability of the two steps
         """
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
-        super().apply_action(eng, action, time, lane_vehs, lanes_count, veh_distance, eps)
+        super().apply_action(eng, action, time, lane_vehs, lanes_count)
 
 
-    def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
+    def observe(self, veh_distance):
         return None

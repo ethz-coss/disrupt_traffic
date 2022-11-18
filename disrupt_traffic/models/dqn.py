@@ -53,16 +53,6 @@ class DQN:
         self.memory = ReplayMemory(batch_size=batch_size)
         self.step_count = 0
 
-    def step(self, action, state, state_next, reward, done):
-        # Save actions and states in replay buffer
-        self.memory.push(action, state, state_next, reward, done)
-
-        self.step_count += 1
-        # Update every `train_freq` frame if `batch_size` samples available
-        if self.step_count % train_freq == 0 and len(self.memory) > self.batch_size:
-            # sample the replay buffer
-            experience_sample = self.memory.sample()
-            self.optimize_model(experience_sample)
 
     def act(self, state, epsilon=0, **kwargs):
         # Use epsilon-greedy for exploration

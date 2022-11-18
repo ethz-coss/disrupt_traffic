@@ -11,13 +11,15 @@ class Denflow_Agent(Hybrid_Agent):
         self.agents_type = 'denflow'
         self.assigned_cluster = None
 
-    def observe(self, eng, time, lanes_count, *args, **kwargs):
+    def observe(self, *args, **kwargs):
         """
         generates the observations made by the agents
         :param eng: the cityflow simulation engine
         :param time: the time of the simulation
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
+        time = self.env.time
+        lanes_count = self.env.lanes_count
         flow_change, density_change = self.get_density_flow(time, lanes_count)
         observations = [flow_change, density_change]
         

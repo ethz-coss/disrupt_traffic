@@ -9,6 +9,7 @@ from engine.cityflow.intersection import Lane
 from gym import utils
 
 from pettingzoo.utils.env import ParallelEnv, AECEnv
+from pettingzoo.utils import agent_selector
 
 class Environment(Parallel, utils.EzPickle):
     """

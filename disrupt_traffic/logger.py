@@ -57,7 +57,7 @@ class Logger:
         :param environ: the environment in which the model was run
         """
         self.reward = 0
-        for agent in environ._agents:
+        for agent in environ.agents:
             self.reward += np.mean(agent.total_rewards)
 
         self.plot_rewards.append(self.reward)
@@ -90,7 +90,7 @@ class Logger:
         waiting_time_dict = {}
         reward_dict = {}
 
-        for agent in environ._agents:
+        for agent in environ.agents:
             waiting_time_dict.update({agent.ID: {}})
             reward_dict.update({agent.ID: agent.total_rewards})
             for move in agent.movements.values():
@@ -163,7 +163,7 @@ class Logger:
         log_file.write("\n")
         log_file.write("\n")
 
-        for agent in environ._agents:
+        for agent in environ.agents:
             log_file.write(agent.ID + "\n")
             for move in agent.movements.values():
                 log_file.write("movement " + str(move.ID) +

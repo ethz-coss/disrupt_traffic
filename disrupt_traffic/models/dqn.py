@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from models.mlp import MLP
+from gym.spaces import Box, Discrete
 
 BUFFER_SIZE = int(1e5)  # replay buffer size
 # GAMMA = 0.999           # discount factor
@@ -19,9 +20,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class DQN:
     """ Actor (Policy) Model."""
 
-    def __init__(self, num_observations, num_actions, seed=2, gamma=0.99, lr=5e-4,
+    def __init__(self, observation_space, action_space, seed=2, gamma=0.99, lr=5e-4,
                  epsilon_min=0.05, epsilon_max=1, batch_size=64, buffer_size=5e5,
                  load=False):
+        num_observations = observation_space.shape[0]
+        if isinstance(action_space, Box):
+            num_actions = action_space.shape[0]
+        elif isinstance(action_space, Discrete):
+            num_actions = action_space.n
         self.num_observations = num_observations
         self.num_actions = num_actions
         self.gamma = gamma

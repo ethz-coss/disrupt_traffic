@@ -85,7 +85,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=False):
+def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=False):
     step = 0
     best_time = 999999
     best_veh_count = 0
@@ -122,8 +122,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
 
             actions = environ.actions  # .copy()
             action_probs = environ.action_probs
-            for agent in environ._agents:
-                agent_id = agent.ID
+            for agent_id, agent in environ._agents_dict.items():
                 act = None
                 if agent.time_to_act:
 
@@ -200,6 +199,7 @@ def run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=F
     logger.save_log_file(environ)
     logger.serialise_data(environ, policies[0])
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == "__main__":
     args = parse_args()
@@ -222,15 +222,17 @@ if __name__ == "__main__":
     environ = Environment(args, n_actions=n_actions,
                           n_states=n_states, AgentClass=AgentClass)
 
+    act_space = environ.action_space
+    obs_space = environ.observation_space
+
     if args.agents_type in ['learning', 'hybrid', 'presslight']:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if args.agents_type == 'hybrid':
-            policy = Hybrid(n_states, n_actions, seed=SEED, load=args.load)
+            policy = Hybrid(obs_space, act_space, seed=SEED, load=args.load)
         else:
             if args.rl_model == 'sac':
                 policy = SAC(n_states, n_actions, seed=SEED, load=args.load)
             else:
-                policy = DQN(n_states, n_actions, seed=SEED, load=args.load)
+                policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
     else:
         print('not using a policy')
         policy = None
@@ -242,7 +244,7 @@ if __name__ == "__main__":
     def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
     detailed_log = args.mode == 'test'
-    run_exp(num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
+    run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
 
     # if args.mfd:
     #     mfd_data = environ.get_mfd_data()

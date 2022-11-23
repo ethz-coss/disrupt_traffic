@@ -1,5 +1,6 @@
 from engine.cityflow.intersection import Movement, Phase
 import numpy as np
+from gym import spaces
 
 
 class Agent:
@@ -42,6 +43,19 @@ class Agent:
             [x for sublist in self.out_lanes for x in sublist])
 
         self.density = []
+
+        n_actions = len(self.phases)
+        self.observation_space = spaces.Box(low=np.zeros(n_actions+48), 
+                                            high=np.array([1]*n_actions+[100]*48),
+                                            dtype=float)
+        # spaces.Box(0, 1, shape=(n_actions,), dtype=int),
+        #                       spaces.Box(0, 100, shape=(48,), dtype=float)))
+        #     )
+        # self.observation_space = spaces.utils.flatten_space(
+        #         spaces.Tuple((spaces.Box(0, 1, shape=(n_actions,), dtype=int),
+        #                       spaces.Box(0, 100, shape=(48,), dtype=float)))
+        #     )
+        self.action_space = spaces.Discrete(n_actions)
 
     def init_movements(self, eng):
         """

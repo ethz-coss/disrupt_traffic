@@ -11,7 +11,7 @@ from gym import utils
 from pettingzoo.utils.env import ParallelEnv, AECEnv
 from pettingzoo.utils import agent_selector
 
-class Environment(Parallel, utils.EzPickle):
+class Environment(ParallelEnv, utils.EzPickle):
     """
     The class Environment represents the environment in which the agents operate in this case it is a city
     consisting of roads, lanes and intersections which are controled by the agents

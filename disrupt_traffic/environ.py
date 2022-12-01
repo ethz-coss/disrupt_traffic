@@ -7,11 +7,11 @@ import functools
 
 from engine.cityflow.intersection import Lane
 from gym import utils
-
+import gym
 from pettingzoo.utils.env import ParallelEnv, AECEnv
 from pettingzoo.utils import agent_selector
 
-class Environment(ParallelEnv, utils.EzPickle):
+class Environment(gym.Env):
     """
     The class Environment represents the environment in which the agents operate in this case it is a city
     consisting of roads, lanes and intersections which are controled by the agents
@@ -62,14 +62,15 @@ class Environment(ParallelEnv, utils.EzPickle):
 
 
 
-        self.observations = {agent_id: None for agent_id in self.agent_ids}
+        self.observations = {agent_id: np.zeros(n_states) for agent_id in self.agent_ids}
         self.actions = {agent_id: None for agent_id in self.agent_ids}
         self.action_probs = {
             agent_id: None for agent_id in self.agent_ids}
         self.rewards = {agent_id: None for agent_id in self.agent_ids}
-        # self.dones = {a_id: False for a_id in self.agent_ids}
-        # self.dones['__all__'] = False
-
+        self._cumulative_rewards = {agent_id: None for agent_id in self.agent_ids}
+        self.dones = {a_id: False for a_id in self.agent_ids}
+        self.dones['__all__'] = False
+        self.infos =  {agent: False for agent in self.agent_ids}
         if self.agents_type == 'cluster':
             raise NotImplementedError 
             # self.cluster_models = Cluster_Models(
@@ -110,15 +111,14 @@ class Environment(ParallelEnv, utils.EzPickle):
         return self._agents_dict[ts_id].action_space
 
     def step(self, actions):
+        assert actions is not None
         self._apply_actions(actions)
         self.sub_steps()
 
-        rewards = {agent.ID: agent.calculate_reward(self.lanes_count) for agent in self.agents
-                   if agent.time_to_act}
+        rewards = self._compute_rewards()
         observations = self._get_obs()
-        info = {}
-        dones = {a_id: self.time == self.num_sim_steps for a_id in self.agent_ids}
-        dones['__all__'] = self.time == self.num_sim_steps
+        info = self.infos
+        dones = self._compute_dones()
 
         return observations, rewards, dones, info
 
@@ -160,9 +160,9 @@ class Environment(ParallelEnv, utils.EzPickle):
                     time_to_act = True
 
     def _apply_actions(self, actions):
-        for agent in self.agents:
+        for agent_id, action in actions.items():
+            agent = self._agents_dict[agent_id]
             if agent.time_to_act:
-                action = actions[agent.ID]
                 agent.apply_action(self.eng, action, self.time,
                                    self.lane_vehs, self.lanes_count)
 
@@ -179,13 +179,22 @@ class Environment(ParallelEnv, utils.EzPickle):
             vehs_distance) for agent in self.agents if agent.time_to_act})
         return self.observations.copy()
 
+    def _compute_dones(self):
+        dones = {ts_id: False for ts_id in self.agent_ids}
+        dones['__all__'] = self.time > self.num_sim_steps
+        return dones
+
+    def _compute_rewards(self):
+        self.rewards.update({agent.ID: agent.calculate_reward(self.lanes_count) for agent in self.agents if agent.time_to_act})
+        return {ts: self.rewards[ts] for ts in self.rewards.keys() if self._agents_dict[ts].time_to_act}
+
     def observe(self, agent):
         """
         Observe should return the observation of the specified agent. This function
         should return a sane observation (though not necessarily the most up to date possible)
         at any time after reset() is called.
         """
-        return self._get_obs['agent']
+        return self.observations[agent]
 
     def reset(self, seed=None, options=None):
         """
@@ -199,7 +208,6 @@ class Environment(ParallelEnv, utils.EzPickle):
         self.time = 0
         for agent in self.agents:
             agent.reset()
-            agent.next_act_time = self.action_freq
 
         for lane_id, lane in self.lanes.items():
             lane.speeds = []
@@ -218,6 +226,7 @@ class Environment(ParallelEnv, utils.EzPickle):
 
         obs = self._get_obs()
         info = {}
+
         return obs
 
     def get_mfd_data(self, time_window=60):
@@ -308,21 +317,24 @@ class EnvironmentParallel(AECEnv, utils.EzPickle):
 
         # dicts
         self.rewards = {a: 0 for a in self.agents}
-        self.terminations = {a: False for a in self.agents}
-        self.truncations = {a: False for a in self.agents}
         self.dones = {a: False for a in self.agents}
         self.infos = {a: {} for a in self.agents}
 
     def reset(self, seed=None, options=None):
+        tts = self.env.eng.get_average_travel_time()
+        vehs = self.env.eng.get_finished_vehicle_count()
+        rew = sum([np.mean(agent.total_rewards) for agent in self.env.agents])
+        print(f'reward: {rew}\ttravel time: {tts}\tvehicles: {vehs}')
+
         self.env.reset(seed=seed, options=options)
         self.agents = self.possible_agents[:]
         self.agent_selection = self._agent_selector.reset()
         self.rewards = {agent: 0 for agent in self.agents}
         self._cumulative_rewards = {agent: 0 for agent in self.agents}
-        self.terminations = {a: False for a in self.agents}
-        self.truncations = {a: False for a in self.agents}
+        self.dones = {a: False for a in self.agents}
+        self.cycled_all_agents = False
         self.infos = {agent: {} for agent in self.agents}
-        
+
     def observation_space(self, agent):
         return self.observation_spaces[agent]
 
@@ -342,34 +354,73 @@ class EnvironmentParallel(AECEnv, utils.EzPickle):
     def render(self, mode='human'):
         return self.env.render(mode)
     
-    # def save_csv(self, out_csv_name, run):
-    #     self.env.save_csv(out_csv_name, run)
+    def _was_done_step(self, action):
+        if action is not None:
+            raise ValueError("when an agent is dead, the only valid action is None")
+
+        # removes dead agent
+        agent = self.agent_selection
+        assert (
+            self.dones[agent]
+        ), "an agent that was not dead as attempted to be removed"
+        del self.dones[agent]
+        if agent in self.rewards:
+            del self.rewards[agent]
+            del self._cumulative_rewards[agent]
+            del self.infos[agent]
+        self.agents.remove(agent)
+
+        # finds next dead agent or loads next live agent (Stored in _skip_agent_selection)
+        _deads_order = [
+            agent
+            for agent in self.agents
+            if (self.dones[agent])
+        ]
+        if _deads_order:
+            if getattr(self, "_skip_agent_selection", None) is None:
+                self._skip_agent_selection = self.agent_selection
+            self.agent_selection = _deads_order[0]
+        else:
+            if getattr(self, "_skip_agent_selection", None) is not None:
+                assert self._skip_agent_selection is not None
+                self.agent_selection = self._skip_agent_selection
+            self._skip_agent_selection = None
+        self._clear_rewards()
+
 
     def step(self, action):
         if (
-            self.truncations[self.agent_selection]
-            or self.terminations[self.agent_selection]
+            self.dones[self.agent_selection]
         ):
-            return self._was_dead_step(action)
+            return self._was_done_step(action=action) # pretend the action is None
+
         agent = self.agent_selection
+
         if not self.action_spaces[agent].contains(action):
             raise Exception('Action for agent {} must be in Discrete({}).'
                             'It is currently {}'.format(agent, self.action_spaces[agent].n, action))
 
         self.env._apply_actions({agent: action})
 
-        if self._agent_selector.is_last():
-            self.env._run_steps()
-            self.env._compute_observations()
+        if self._agent_selector.is_last() or self.cycled_all_agents:
+            self.env.sub_steps()
+            self.env._get_obs()
             self.rewards = self.env._compute_rewards()
-            self.env._compute_info()
         else:
             self._clear_rewards()
         
-        done = self.env.time == self.env.num_sim_steps
-        self.truncations = {a : done for a in self.agents}
-        self.dones = {a : done for a in self.agents}
+        done = self.env._compute_dones()['__all__']
+        self.dones = {a: done for a in self.agents}
+        self.dones['__all__'] = done
 
         self.agent_selection = self._agent_selector.next()
+        while not self.env._agents_dict[self.agent_selection].time_to_act:
+            # print('agent', self.env.time, self.agent_selection, self.env._agents_dict[self.agent_selection].next_act_time)
+            if self._agent_selector.is_last():
+                self.env.sub_steps()
+                self.env._get_obs()
+                self.rewards = self.env._compute_rewards()
+            self.agent_selection = self._agent_selector.next()
+
         self._cumulative_rewards[agent] = 0
         self._accumulate_rewards()

@@ -25,7 +25,8 @@ class Agent:
 
         self.phase = None
 
-        self.next_act_time = env.action_freq
+        # self.next_act_time = env.action_freq
+        self.next_act_time = 0
         self.reward_freq = 10
         self.last_act_time = -1
 
@@ -208,6 +209,7 @@ class Agent:
             move.waiting_time_list = []
             move.arr_rate = 0
         self.total_rewards = []
+        self.next_act_time = 0
         self.last_act_time = -1
         self.action_type = 'act'
 

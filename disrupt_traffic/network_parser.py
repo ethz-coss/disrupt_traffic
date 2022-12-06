@@ -1,8 +1,27 @@
 import json
 import os
+from shapely.geometry import Point, LineString
 
+def parallel_point_shift(p1, p2, h):
+    (x1,y1) = p1['x'], p1['y']
+    (x2,y2) = p2['x'], p2['y']
 
-def get_network(config):
+    if h:
+        theta = np.arctan((x1-x2)/(y1-y2+1e-9))
+        if y1 < y2:
+            x1 -= h*np.cos(theta)
+            y1 += h*np.sin(theta)
+            x2 -= h*np.cos(theta)
+            y2 += h*np.sin(theta)
+        else:
+            x1 += h*np.cos(theta)
+            y1 -= h*np.sin(theta)
+            x2 += h*np.cos(theta)
+            y2 -= h*np.sin(theta)
+
+    return ((x1,y1), (x2,y2))
+
+def get_network(config, h=0, keep_virtual=False):
     # map roads to intersections they connect to
 
     neighbors = {}
@@ -23,7 +42,7 @@ def get_network(config):
     road_intersection_map = {}
     # map roads to connected intersections
     for intersection in intersections:
-        if not intersection['virtual']:
+        if not intersection['virtual'] or keep_virtual:
             for road in intersection['roads']:
                 intersection_set = road_intersection_map.setdefault(road, set())
                 intersection_set.add(intersection['id'])
@@ -51,11 +70,19 @@ def get_network(config):
         road_data = roads.setdefault(road['id'], {})
         road_data['num_lanes'] = len(road['lanes'])
         road_data['max_speed'] = road['lanes'][0]['maxSpeed']
-        length = 0
-        for p1, p2 in zip(road['points'][:-1], road['points'][1:]):
-            length += ((p2['x']-p1['x'])**2 +
-                        (p2['y']-p1['y'])**2)**0.5
-        road_data['length'] = length
+
+        points = road['points']
+        # for each point excluding the start point and end point, shift point based on line to next point
+        transformed_points = []
+        # get pairs of points on the line segment
+        for p1,p2 in zip(points[0:], points[1:]):
+            (x1,y1), (x2,y2) = parallel_point_shift(p1,p2,h)
+            transformed_points.append((x1,y1))
+
+        transformed_points.append((x2,y2))
+        points = transformed_points
+        road_data['geometry'] = LineString([p for p in points])
+        road_data['length'] = road_data['geometry'].length
 
         
     # parse flow file
@@ -66,9 +93,21 @@ def get_network(config):
             flows[flow_id] = {'route': flow['route']}
             flows[flow_id]['routelength'] = sum([roads[road_id]['length'] for road_id in flows[flow_id]['route']])
             flows[flow_id]['freeflow_time'] = sum([roads[road_id]['length']/roads[road_id]['max_speed'] for road_id in flows[flow_id]['route']])
+            
+            start_time = flow['startTime']
+            end_time = flow['endTime']
+            interval = flow['interval']
+            if end_time == -1: end_time = 3600
+            if end_time-start_time==0:
+                rate = False
+            else:
+                rate = True
+            if rate:
+                flows[flow_id]['demand'] = 1/interval*(end_time-start_time) # per hour
+            else:
+                flows[flow_id]['demand'] = interval # per hour
 
     return neighbors, roads, flows
-
 
 
 if __name__ == "__main__":

@@ -65,6 +65,25 @@ class Logger:
         self.travel_time.append(environ.eng.get_average_travel_time())
         self.episode_losses.append(np.mean(self.losses))
 
+    def log_mfd(self, environ, time_window=60):
+        data = environ.get_mfd_data(time_window=time_window)
+        road_dict = {}
+        for lane_id, lane in environ.lanes.items():
+            road_id, direction = lane_id.rsplit('_',1)
+            road_data = road_dict.setdefault(road_id, {'density': [], 'speed': []})
+            road_data['density'].append(data[lane_id]['density'])
+            road_data['speed'].append(data[lane_id]['speed'])
+
+        output = {}
+        for road_id, road_data in road_dict.items():
+            output[road_id] = {}
+            density = np.vstack(road_data['density'])
+            speed = np.vstack(road_data['speed'])
+            output[road_id]['speed'] = np.nansum(speed*density, axis=0)/np.nansum(density, axis=0)
+            output[road_id]['density'] = np.nanmean(density, axis=0)
+
+        self.mfd = output
+
     def log_delays(self, config, environ):
         network, roads, flows = get_network(config)
         delays = []
@@ -90,6 +109,8 @@ class Logger:
         waiting_time_dict = {}
         reward_dict = {}
 
+        self.log_mfd(environ, time_window=60)
+        
         for agent in environ.agents:
             waiting_time_dict.update({agent.ID: {}})
             reward_dict.update({agent.ID: agent.total_rewards})
@@ -109,7 +130,7 @@ class Logger:
             pickle.dump(reward_dict, f)
 
         with open(os.path.join(self.log_path, "mfd.pickle"), "wb") as f:
-            pickle.dump(environ.mfd_data, f)
+            pickle.dump(self.mfd, f)
 
         with open(os.path.join(self.log_path, "stops.pickle"), "wb") as f:
             pickle.dump(environ.stops, f)

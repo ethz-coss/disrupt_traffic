@@ -19,7 +19,7 @@ class Environment(gym.Env):
 
     metadata = {"name": "cityflow"}
 
-    def __init__(self, args=None, ID=0, n_actions=9, n_states=44, AgentClass=None):
+    def __init__(self, args=None, ID=0, AgentClass=None):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
@@ -55,12 +55,14 @@ class Environment(gym.Env):
         self.agents = []
         self._agents_dict = {}
         for agent_id in self.agent_ids:
-            new_agent = AgentClass(self, ID=agent_id, in_roads=self.eng.get_intersection_in_roads(
-                agent_id), out_roads=self.eng.get_intersection_out_roads(agent_id), n_states=n_states, lr=args.lr, batch_size=args.batch_size)
+            new_agent = AgentClass(self, ID=agent_id,
+                                   in_roads=self.eng.get_intersection_in_roads(agent_id),
+                                   out_roads=self.eng.get_intersection_out_roads(agent_id),
+                                   lr=args.lr, batch_size=args.batch_size)
             self.agents.append(new_agent)
             self._agents_dict[agent_id] = new_agent
 
-
+        n_states = new_agent.observation_space.shape[0]
 
         self.observations = {agent_id: np.zeros(n_states) for agent_id in self.agent_ids}
         self.actions = {agent_id: None for agent_id in self.agent_ids}
@@ -236,10 +238,9 @@ class Environment(gym.Env):
             speed = data['speed']
             density = data['density']
 
-        #     _lanespeeds = sum(lane.speeds, [])
             _lanedensity = np.subtract(
                 lane.arr_vehs_num, lane.dep_vehs_num).cumsum()
-            for t in range(3600):
+            for t in range(self.num_sim_steps):
                 time_window = min(time_window, t+1)
                 idx_start = t
                 idx_end = t+time_window
@@ -260,7 +261,6 @@ class Environment(gym.Env):
         for veh_id in finished_vehs:
             veh_info = self.vehicles[veh_id]
             veh_info['end_time'] = self.time
-            # veh_info['stops'] =
 
         for veh_id in new_vehs:
             veh_info = self.vehicles.setdefault(veh_id, {})
@@ -389,7 +389,6 @@ class EnvironmentParallel(AECEnv, utils.EzPickle):
 
         self.agent_selection = self._agent_selector.next()
         while not self.env._agents_dict[self.agent_selection].time_to_act:
-            # print('agent', self.env.time, self.agent_selection, self.env._agents_dict[self.agent_selection].next_act_time)
             if self._agent_selector.is_last():
                 self.env.sub_steps()
                 self.env._get_obs()

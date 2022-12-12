@@ -92,7 +92,8 @@ class Logger:
             if 'end_time' in veh_data.keys():
                 tt = veh_data['end_time'] - veh_data['start_time']
             else:
-                tt = environ.time - veh_data['start_time']
+                continue # ignore unfinished vehicles
+                # tt = environ.time - veh_data['start_time']
             flow_id = veh_data['flow_id']
             delay = (tt - flows[flow_id]['freeflow_time'])/flows[flow_id]['routelength']*1000 # secs/km
             delays.append(delay)
@@ -100,7 +101,6 @@ class Logger:
         self.delays.append(delays)
         self.travel_times.append(travel_times)
         return delays, travel_times
-        # np.mean(delays), np.mean(travel_times)
 
     def serialise_data(self, environ, policy=None):
         """
@@ -110,7 +110,7 @@ class Logger:
         reward_dict = {}
 
         self.log_mfd(environ, time_window=60)
-        
+
         for agent in environ.agents:
             waiting_time_dict.update({agent.ID: {}})
             reward_dict.update({agent.ID: agent.total_rewards})
@@ -208,3 +208,45 @@ class Logger:
         for policy in policies:
             policy.save(self.log_path, flag)
 
+    def save_clusters(self, environ):
+        if not os.path.isdir(self.log_path + '/cluster_nets'):
+            os.mkdir(self.log_path + '/cluster_nets')
+        for key, model in zip(environ.cluster_models.model_dict.keys(), environ.cluster_models.model_dict.values()):
+            torch.save(model[0].state_dict(), self.log_path +
+                       '/cluster_nets/cluster' + str(key) + '_q_net.pt')
+            torch.save(model[1].state_dict(), self.log_path +
+                       '/cluster_nets/cluster' + str(key) + '_target_net.pt')
+
+        for key, memory in zip(environ.cluster_models.memory_dict.keys(), environ.cluster_models.memory_dict.values()):
+            with open(os.path.join(self.log_path, f"cluster_nets/memory{key}.dill"), "wb") as f:
+                dill.dump(memory, f)
+
+        # environ.clustering.M = [environ.clustering.M[-1]]
+
+        with open(os.path.join(self.log_path, "clustering.dill"), "wb") as f:
+            dill.dump(environ.cluster_algo, f)
+
+    def plot_pressure(self, environ):
+        """
+        plots pressure as a function of time, both avg pressure of all intersections and individual pressure
+        :param environ: the environment, after some simulation steps
+        """
+        plot_avg = []
+        plot_std = []
+        for data in environ.log_pressure:
+            plot_avg.append(np.mean(data))
+            plot_std.append(np.std(data))
+
+        # plt.errorbar(range(len(plot_avg)), plot_avg, yerr=plot_std)
+        plt.plot(plot_avg)
+        plt.savefig(self.log_path + '/avg_pressure.png')
+        plt.clf()
+
+        plt.plot(environ.log_pressure)
+        plt.savefig(self.log_path + '/partial_pressure.png')
+        plt.clf()
+
+        with open(os.path.join(self.log_path, "avg_pressure.pickle"), "wb") as f:
+            pickle.dump(plot_avg, f)
+        with open(os.path.join(self.log_path, "partial_pressure.pickle"), "wb") as f:
+            pickle.dump(environ.log_pressure, f)

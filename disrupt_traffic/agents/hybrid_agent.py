@@ -8,8 +8,8 @@ from agents.learning_agent import Learning_Agent
 
 class Hybrid_Agent(Learning_Agent):
 
-    def __init__(self, eng, ID='', in_roads=[], out_roads=[], n_states=None, lr=None, batch_size=None):
-        super().__init__(eng, ID, in_roads, out_roads, n_states, lr, batch_size)
+    def __init__(self, eng, ID='', in_roads=[], out_roads=[], lr=None, batch_size=None):
+        super().__init__(eng, ID, in_roads, out_roads, lr, batch_size)
         self.agents_type = 'hybrid'
 
     def apply_action(self, eng, action, time, lane_vehs, lanes_count):

@@ -227,7 +227,7 @@ class Agent:
                 self.chosen_phase = self.phases[action]
             else:
                 self.chosen_phase = self.phases[action]
-                self.green_time = 10
+                self.green_time = self.env.action_freq
 
             self.last_act_time = time
             if self.phase.ID != action:

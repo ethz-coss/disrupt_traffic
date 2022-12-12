@@ -122,5 +122,3 @@ class Analytical_Agent(Agent):
                 priority_list.append((movement, green_max))
             
         priority_list = add_phase_to_queue(priority_list)
-        # while priority_list:
-        #     priority_list = add_phase_to_queue(priority_list)

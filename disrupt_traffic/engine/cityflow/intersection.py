@@ -138,28 +138,11 @@ class Movement:
         :param current_movements: a list of movements that are currently enabled
         :returns: the predicted green time of the movement
         """
-
-        # start_time = time-10 if time > 10 else 0
-        # self.arr_rate = self.get_arr_veh_num(start_time, time) / (time - start_time)
-        # dep = self.get_dep_veh_num(start_time, time)
-
-
-        # lanes_vehs = eng.get_lane_vehicle_count()
-        # occupancies = []
-        # for lane in self.out_lanes:
-        #     occupancies.append((lanes_vehs[lane]*7.5) / self.out_length)
-
-        # free_space = (1 - max(occupancies)) * self.out_length
-        
         self.arr_rate = self.get_arr_veh_num(0, time) / time
         dep = self.get_dep_veh_num(0, time)
 
         green_time = 0
         LHS = dep + self.max_saturation * green_time
-
-        # incoming_cars = self.max_saturation * green_time    
-        # if incoming_cars > free_space:
-        #     return green_time
 
         clearing_time = self.clearing_time
             
@@ -174,10 +157,6 @@ class Movement:
             end_time = time + clearing_time + green_time - self.pass_time
 
             RHS = self.arr_rate * end_time
-
-            # incoming_cars = self.max_saturation * green_time    
-            # if incoming_cars > free_space:
-            #     return green_time
 
         return green_time
     

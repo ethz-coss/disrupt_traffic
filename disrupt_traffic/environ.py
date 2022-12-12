@@ -73,10 +73,6 @@ class Environment(gym.Env):
         self.infos =  {agent: False for agent in self.agent_ids}
         if self.agents_type == 'cluster':
             raise NotImplementedError 
-            # self.cluster_models = Cluster_Models(
-            #     n_states=n_states, n_actions=self.n_actions, lr=args.lr, batch_size=self.batch_size)
-            # # self.cluster_algo = SOStream.sostream.SOStream(alpha=0, min_pts=9, merge_threshold=0.01)
-            # self.cluster_algo = Mfd_Clustering(self.cluster_models)
 
         self.mfd_data = []
         self.agent_history = []
@@ -261,10 +257,6 @@ class Environment(gym.Env):
         finished_vehs = self.prev_vehs - current_vehs
         new_vehs = current_vehs - self.prev_vehs
 
-        # for veh_id in current_vehs:
-        #     veh_info = self.vehicles[veh_id]
-        #     veh_info[]
-
         for veh_id in finished_vehs:
             veh_info = self.vehicles[veh_id]
             veh_info['end_time'] = self.time
@@ -276,24 +268,6 @@ class Environment(gym.Env):
             veh_info['start_time'] = self.time
 
         self.prev_vehs = current_vehs
-
-
-def get_mfd_data(time, lanes_count, lanes):
-    # TODO: revise/remove
-    flow = []
-    density = []
-
-    for lane in lanes:
-        if time >= 60:
-            f = np.sum(lane.arr_vehs_num[time-60: time]) / 60
-        else:
-            f = np.sum(lane.arr_vehs_num[0: time]) / time
-        d = lanes_count[lane.ID] / lane.length
-
-        flow.append(f)
-        density.append(d)
-
-    return (flow, density)
 
 
 

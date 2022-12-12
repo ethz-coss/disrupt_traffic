@@ -49,13 +49,7 @@ class Agent:
         self.observation_space = spaces.Box(low=np.zeros(n_actions+48), 
                                             high=np.array([1]*n_actions+[100]*48),
                                             dtype=float)
-        # spaces.Box(0, 1, shape=(n_actions,), dtype=int),
-        #                       spaces.Box(0, 100, shape=(48,), dtype=float)))
-        #     )
-        # self.observation_space = spaces.utils.flatten_space(
-        #         spaces.Tuple((spaces.Box(0, 1, shape=(n_actions,), dtype=int),
-        #                       spaces.Box(0, 100, shape=(48,), dtype=float)))
-        #     )
+
         self.action_space = spaces.Discrete(n_actions)
 
     def init_movements(self, eng):
@@ -68,16 +62,6 @@ class Agent:
         """
         self.in_lanes_length = {}
         self.out_lanes_length = {}
-
-        # for in_road in eng.get_intersection_in_roads(self.ID):
-        #     for lane, length in eng.get_road_lanes_length(in_road):
-        #         lane_length = length
-        #         self.in_lanes_length.update({lane : length})
-
-        # for out_road in eng.get_intersection_out_roads(self.ID):
-        #     for lane, length in eng.get_road_lanes_length(out_road):
-        #         out_lane_length = length
-        #         self.out_lanes_length.update({lane : length})
 
         for idx, roadlink in enumerate(eng.get_intersection_lane_links(self.ID)):
             lanes = roadlink[1][:]
@@ -154,16 +138,6 @@ class Agent:
         gets the reward of the agent in the form of pressure
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
-        # pressure = 0
-        # for x in self.movements.values():
-        #     pressure += np.sum([lanes_count[lane] / int(self.in_lanes_length[lane]/5) for lane in x.in_lanes]) - np.sum([lanes_count[lane] / int(self.in_lanes_length[lane]/5) for lane in x.out_lanes])
-        # return -np.abs(pressure)
-
-        # return -np.abs(np.sum([lanes_count[x] / int(self.in_lanes_length[x]/5) for x in self.in_lanes])
-        #                -np.sum([lanes_count[x] / int(self.out_lanes_length[x]/5) for x in self.out_lanes]))
-
-        # sum_wt = max(1, np.sum([x.waiting_time for x in self.movements.values()])
-
         return -np.abs(np.sum([x.get_pressure(lanes_count) for x in self.movements.values()]))
 
     def update_arr_dep_veh_num(self, lanes_vehs, lanes_count):

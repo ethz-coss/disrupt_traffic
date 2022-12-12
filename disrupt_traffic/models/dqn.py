@@ -110,10 +110,6 @@ class DQN:
         self.optimizer.zero_grad()
         loss.backward()
 
-        # for param in net_local.parameters():
-        #     param.grad.data.clamp_(-1, 1)
-        # torch.nn.utils.clip_grad.clip_grad_norm_(net_local.parameters(), 10)
-
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #

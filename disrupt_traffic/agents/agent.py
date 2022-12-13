@@ -1,43 +1,56 @@
-from intersection import Movement, Phase
+from engine.cityflow.intersection import Movement, Phase
 import numpy as np
+from gym import spaces
+
 
 class Agent:
     """
     The base clase of an Agent, Learning and Analytical agents derive from it, basically defines methods used by both types of agents
     """
-    def __init__(self, eng, ID):
+
+    def __init__(self, env, ID):
         """
         initialises the Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 
         """
         self.ID = ID
-        
+        self.env = env
+
         self.movements = {}
         self.phases = {}
         self.clearing_phase = Phase(0)
 
         self.total_rewards = []
         self.reward_count = 0
-        
-        self.action = Phase(ID=0)
-        self.phase = Phase(ID="")
 
-        self.action_freq = 10
+        self.phase = None
+
+        # self.next_act_time = env.action_freq
+        self.next_act_time = 0
         self.reward_freq = 10
-        
+        self.last_act_time = -1
+
         self.action_type = "act"
         self.clearing_time = 5
 
-        self.init_movements(eng)
-        self.init_phases(eng)
+        self.init_movements(self.env.eng)
+        self.init_phases(self.env.eng)
 
         self.in_lanes = [x.in_lanes for x in self.movements.values()]
         self.in_lanes = set([x for sublist in self.in_lanes for x in sublist])
-        
+
         self.out_lanes = [x.out_lanes for x in self.movements.values()]
-        self.out_lanes = set([x for sublist in self.out_lanes for x in sublist])
+        self.out_lanes = set(
+            [x for sublist in self.out_lanes for x in sublist])
 
         self.density = []
+
+        n_actions = len(self.phases)
+        self.observation_space = spaces.Box(low=np.zeros(n_actions+48), 
+                                            high=np.array([1]*n_actions+[100]*48),
+                                            dtype=float)
+
+        self.action_space = spaces.Discrete(n_actions)
 
     def init_movements(self, eng):
         """
@@ -50,16 +63,6 @@ class Agent:
         self.in_lanes_length = {}
         self.out_lanes_length = {}
 
-        # for in_road in eng.get_intersection_in_roads(self.ID):
-        #     for lane, length in eng.get_road_lanes_length(in_road):
-        #         lane_length = length
-        #         self.in_lanes_length.update({lane : length})
-
-        # for out_road in eng.get_intersection_out_roads(self.ID):
-        #     for lane, length in eng.get_road_lanes_length(out_road):
-        #         out_lane_length = length
-        #         self.out_lanes_length.update({lane : length})
-        
         for idx, roadlink in enumerate(eng.get_intersection_lane_links(self.ID)):
             lanes = roadlink[1][:]
             in_road = roadlink[0][0]
@@ -69,15 +72,16 @@ class Agent:
 
             for lane, length in eng.get_road_lanes_length(in_road):
                 lane_length = length
-                self.in_lanes_length.update({lane : length})
-                
+                self.in_lanes_length.update({lane: length})
+
             for lane, length in eng.get_road_lanes_length(out_road):
                 out_lane_length = length
-                self.out_lanes_length.update({lane : length})
-                
-            new_movement = Movement(idx, in_road, out_road, in_lanes, out_lanes, lane_length, out_lane_length, clearing_time=self.clearing_time)
-            self.movements.update({roadlink[0] : new_movement})
-            
+                self.out_lanes_length.update({lane: length})
+
+            new_movement = Movement(idx, in_road, out_road, in_lanes, out_lanes,
+                                    lane_length, out_lane_length, clearing_time=self.clearing_time)
+            self.movements.update({roadlink[0]: new_movement})
+
     def init_phases(self, eng):
         """
         initialises the phases of the Agent based on the intersection phases extracted from the simulation data
@@ -87,40 +91,38 @@ class Agent:
             phases = phase_tuple[0]
             types = phase_tuple[1]
             empty_phases = []
-            
+
             new_phase_moves = []
             for move, move_type in zip(phases, types):
                 key = tuple(move)
                 self.movements[key].move_type = move_type
                 new_phase_moves.append(self.movements[key].ID)
 
-            if types and all(x == 1 for x in types): #1 -> turn right
+            if types and all(x == 1 for x in types):  # 1 -> turn right
                 self.clearing_phase = Phase(idx, new_phase_moves)
 
             if new_phase_moves:
                 if set(new_phase_moves) not in [set(x.movements) for x in self.phases.values()]:
-                    new_phase = Phase(idx, new_phase_moves)                    
-                    self.phases.update({idx : new_phase})
+                    new_phase = Phase(idx, new_phase_moves)
+                    self.phases.update({idx: new_phase})
             else:
                 empty_phases.append(idx)
 
             if empty_phases:
                 self.clearing_phase = Phase(empty_phases[0], [])
-                self.phases.update({empty_phases[0] : self.clearing_phase})
-            
+                self.phases.update({empty_phases[0]: self.clearing_phase})
+
         self.phase = self.clearing_phase
         temp_moves = dict(self.movements)
         self.movements.clear()
         for move in temp_moves.values():
             move.phases = []
-            self.movements.update({move.ID : move})
-            
+            self.movements.update({move.ID: move})
+
         for phase in self.phases.values():
             for move in phase.movements:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
-
-        
 
     def set_phase(self, eng, phase):
         """
@@ -136,20 +138,8 @@ class Agent:
         gets the reward of the agent in the form of pressure
         :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
         """
-        # pressure = 0
-        # for x in self.movements.values():
-        #     pressure += np.sum([lanes_count[lane] / int(self.in_lanes_length[lane]/5) for lane in x.in_lanes]) - np.sum([lanes_count[lane] / int(self.in_lanes_length[lane]/5) for lane in x.out_lanes])
-        # return -np.abs(pressure)
-    
-        # return -np.abs(np.sum([lanes_count[x] / int(self.in_lanes_length[x]/5) for x in self.in_lanes])
-        #                -np.sum([lanes_count[x] / int(self.out_lanes_length[x]/5) for x in self.out_lanes]))
-
-
-        # sum_wt = max(1, np.sum([x.waiting_time for x in self.movements.values()])
-        
         return -np.abs(np.sum([x.get_pressure(lanes_count) for x in self.movements.values()]))
 
-    
     def update_arr_dep_veh_num(self, lanes_vehs, lanes_count):
         """
         Updates the list containing the number vehicles that arrived and departed
@@ -165,8 +155,7 @@ class Agent:
         for lane in self.out_lanes:
             d.append(lanes_count[lane] / self.out_lanes_length[lane])
 
-        self.density.append(np.mean(d))
-
+        self.density.append(sum(d)/len(d))
 
     def update_wait_time(self, time, action, phase, lanes_count):
         """
@@ -177,8 +166,8 @@ class Agent:
         """
         for movement in self.movements.values():
             movement.update_wait_time(time, action, phase, lanes_count)
-            
-    def reset_movements(self):
+
+    def reset(self):
         """
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
@@ -193,8 +182,11 @@ class Agent:
             move.max_waiting_time = 0
             move.waiting_time_list = []
             move.arr_rate = 0
+        self.total_rewards = []
+        self.next_act_time = 0
+        self.last_act_time = -1
+        self.action_type = 'act'
 
-            
     def update_priority_idx(self, time):
         """
         Updates the priority of the movements of the intersection, the higher priority the more the movement needs to get a green lights
@@ -202,50 +194,63 @@ class Agent:
         """
         for idx, movement in zip(self.movements.keys(), self.movements.values()):
             if idx in self.phase.movements:
-                movement.priority = ((movement.green_time * movement.max_saturation) / (movement.green_time + movement.clearing_time))
+                movement.priority = ((movement.green_time * movement.max_saturation) / (
+                    movement.green_time + movement.clearing_time))
             else:
                 penalty_term = movement.clearing_time
                 movement.priority = ((movement.green_time * movement.max_saturation) /
                                      (movement.green_time + movement.clearing_time + penalty_term))
-        
+
     def update_clear_green_time(self, time, eng):
         """
         Updates the green times of the movements of the intersection
         :param time: the time in the simulation, at this moment only integer values are supported
         """
         for movement in self.movements.values():
-            green_time = movement.get_green_time(time, self.phase.movements, eng)
+            green_time = movement.get_green_time(
+                time, self.phase.movements, eng)
             movement.green_time = green_time
 
+    def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
+        raise NotImplementedError
 
-
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+    def apply_action(self, eng, action, time, lane_vehs, lanes_count):
         """
         represents a single step of the simulation for the analytical agent
         :param time: the current timestep
         :param done: flag indicating weather this has been the last step of the episode, used for learning, here for interchangability of the two steps
         """
-        if time % self.action_freq == 0:
-            if self.action_type == "act":
-                self.total_rewards += self.get_reward(lanes_count)
-                self.reward_count += 1
-                self.action = self.act(lanes_count)
-                self.green_time = 10
-                    
-                if self.phase.ID != self.action.ID:
-                    self.update_wait_time(time, self.action, self.phase, lanes_count)
-                    self.set_phase(eng, self.clearing_phase)
-                    self.action_freq = time + self.clearing_time
-                    self.action_type = "update"
-                    
-                else:
-                    self.action_freq = time + self.green_time
 
-            elif self.action_type == "update":
-                self.set_phase(eng, self.action)
-                self.action_freq = time + self.green_time
-                self.action_type = "act"
+        if self.action_type == "act":
+            if type(action) is tuple:
+                action, self.green_time = action
+                self.chosen_phase = self.phases[action]
+            else:
+                self.chosen_phase = self.phases[action]
+                self.green_time = self.env.action_freq
 
+            self.last_act_time = time
+            if self.phase.ID != action:
+                self.update_wait_time(
+                    time, self.chosen_phase, self.phase, lanes_count)
+                self.set_phase(eng, self.clearing_phase)
+                self.next_act_time = time + self.clearing_time + self.green_time
+                self.action_type = "update"
+
+            else:
+                self.next_act_time = time + self.green_time
+
+    def update(self):
+        if (self.action_type == 'update' and
+                self.env.time == (self.last_act_time+self.clearing_time)):
+            self.set_phase(self.env.eng, self.chosen_phase)
+            self.action_type = "act"
+
+    def calculate_reward(self, lanes_count):
+        reward = self.get_reward(lanes_count)
+        self.total_rewards += [reward]
+        self.reward_count += 1
+        return reward
 
     def get_density_flow(self, time, lanes_count):
         flow_changes = []
@@ -269,8 +274,12 @@ class Agent:
         else:
             density_now = self.density[time]
             density_before = 0
-                
+
         avg_flow_change = np.mean(flow_changes)
         avg_density_change = density_now - density_before
 
         return avg_flow_change, avg_density_change
+
+    @property
+    def time_to_act(self):
+        return (self.env.time == self.next_act_time)

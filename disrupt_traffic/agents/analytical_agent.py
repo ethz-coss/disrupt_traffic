@@ -1,54 +1,36 @@
-import cityflow
 import numpy as np
-import random
 import queue
 import operator
 
-from intersection import Movement, Phase
-from agent import Agent
+from agents.agent import Agent
 
 class Analytical_Agent(Agent):
     """
     The class defining an agent which controls the traffic lights using the analytical approach
     from Helbing, Lammer's works
     """
-    def __init__(self, eng, ID=''):
+    def __init__(self, env, ID='', **kwargs):
         """
         initialises the Analytical Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 
         :param eng: the cityflow simulation engine
         """
-        super().__init__(eng, ID)
+        super().__init__(env, ID)
 
         self.action_queue = queue.Queue()
         self.agents_type = 'analytical'
 
-    def step(self, eng, time, lane_vehs, lanes_count, veh_distance, eps, memory, local_net, done):
+
+    def observe(self, veh_distance):
+        return None
+
+
+    def apply_action(self, eng, action, time, lane_vehs, lanes_count):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
-        if time % (self.reward_freq + self.clearing_time) == 0:
-            self.total_rewards += [self.get_reward(lanes_count)]
-        if time % self.action_freq == 0:
-            if self.action_type == "act":
-                # self.total_rewards += self.get_reward(lanes_count)
-                # self.reward_count += 1
-                self.action, self.green_time = self.act(eng, time)
-
-                if self.phase.ID != self.action.ID:
-                    self.update_wait_time(time, self.action, self.phase, lanes_count)
-                    self.set_phase(eng, self.clearing_phase)
-                    self.action_freq = time + self.clearing_time
-                    self.action_type = "update"
-
-                else:
-                    self.action_freq = time + self.green_time
-
-            elif self.action_type == "update":
-                self.set_phase(eng, self.action)
-                self.action_freq = time + self.green_time
-                self.action_type = "act"
+        super().apply_action(eng, action, time, lane_vehs, lanes_count)
 
         
-    def act(self, eng, time):
+    def choose_act(self, eng, time):
         """
         selects the next action - phase for the agent to select along with the time it should stay on for
         :param eng: the cityflow simulation engine
@@ -61,10 +43,10 @@ class Analytical_Agent(Agent):
         self.stabilise(time)
         if not self.action_queue.empty():
             phase, green_time = self.action_queue.get()
-            return phase, int(np.ceil(green_time))
+            return phase.ID, int(np.ceil(green_time))
 
         if all([x.green_time == 0 for x in self.movements.values()]):
-                return self.phase, 5
+                return self.phase.ID, 5
         
         self.update_priority_idx(time)
         phases_priority = {}
@@ -78,11 +60,12 @@ class Analytical_Agent(Agent):
 
             phases_priority.update({phase.ID : phase_prioirty})
         
-        action = self.phases[max(phases_priority.items(), key=operator.itemgetter(1))[0]]
-        if not action.movements:
+        action = max(phases_priority.items(), key=operator.itemgetter(1))[0]
+        chosen_phase = self.phases[action]
+        if not chosen_phase.movements:
             green_time = self.clearing_time
         else:
-            green_time = max(5, int(np.min([self.movements[x].green_time for x in action.movements])))
+            green_time = max(5, int(min([self.movements[x].green_time for x in chosen_phase.movements])))
         return action, green_time
 
     def stabilise(self, time):
@@ -117,7 +100,7 @@ class Analytical_Agent(Agent):
 
         T = 360
         T_max = 480
-        sum_Q = np.sum([x.arr_rate for x in self.movements.values()])
+        sum_Q = sum([x.arr_rate for x in self.movements.values()])
         
         priority_list = []
 
@@ -139,5 +122,3 @@ class Analytical_Agent(Agent):
                 priority_list.append((movement, green_max))
             
         priority_list = add_phase_to_queue(priority_list)
-        # while priority_list:
-        #     priority_list = add_phase_to_queue(priority_list)

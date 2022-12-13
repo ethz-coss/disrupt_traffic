@@ -1,3 +1,7 @@
+runs/*
+*.pickle
+*.dil1l
+logs.txt
 replayFile.txt
 **/replayFile.txt
 .DS_Store
@@ -13,12 +17,9 @@ results*/
 results*
 *results*
 *results*/
-<<<<<<< HEAD
 videos*
 *videos*
 *videos*/
-=======
->>>>>>> f7b34e639ea6bfe8e3c280fe628e8c5abed100a3
 /pca
 tikzpicture.txt
 bsub_cmds

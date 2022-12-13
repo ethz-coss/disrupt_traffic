@@ -102,9 +102,10 @@ class Movement:
         for lane in self.in_lanes:
             current_vehs.update(lanes_vehs[lane])
 
-        dep_vehs = len(self.prev_vehs - current_vehs)  
+        dep_vehs = len(self.prev_vehs - current_vehs)
+        arr_vehs = len(current_vehs - self.prev_vehs)
         self.dep_vehs_num.append(dep_vehs)
-        self.arr_vehs_num.append(len(current_vehs) - (len(self.prev_vehs) - dep_vehs))
+        self.arr_vehs_num.append(arr_vehs)
         self.prev_vehs = current_vehs
 
         
@@ -137,28 +138,11 @@ class Movement:
         :param current_movements: a list of movements that are currently enabled
         :returns: the predicted green time of the movement
         """
-
-        # start_time = time-10 if time > 10 else 0
-        # self.arr_rate = self.get_arr_veh_num(start_time, time) / (time - start_time)
-        # dep = self.get_dep_veh_num(start_time, time)
-
-
-        # lanes_vehs = eng.get_lane_vehicle_count()
-        # occupancies = []
-        # for lane in self.out_lanes:
-        #     occupancies.append((lanes_vehs[lane]*7.5) / self.out_length)
-
-        # free_space = (1 - max(occupancies)) * self.out_length
-        
         self.arr_rate = self.get_arr_veh_num(0, time) / time
         dep = self.get_dep_veh_num(0, time)
 
         green_time = 0
         LHS = dep + self.max_saturation * green_time
-
-        # incoming_cars = self.max_saturation * green_time    
-        # if incoming_cars > free_space:
-        #     return green_time
 
         clearing_time = self.clearing_time
             
@@ -173,10 +157,6 @@ class Movement:
             end_time = time + clearing_time + green_time - self.pass_time
 
             RHS = self.arr_rate * end_time
-
-            # incoming_cars = self.max_saturation * green_time    
-            # if incoming_cars > free_space:
-            #     return green_time
 
         return green_time
     
@@ -204,10 +184,14 @@ class Lane:
         self.dep_vehs_num = []
         self.arr_vehs_num = []
         self.prev_vehs = set()
-
+        self.speeds = []
 
         self.length = eng.get_lane_length(self.ID)
         
+
+    def update_speeds(self, environ, veh_ids, speeds):
+        self.speeds.append([speeds[id] for id in veh_ids if 'shadow' not in id])
+
 
     def update_flow_data(self, eng, lanes_vehs):
         """
@@ -218,7 +202,8 @@ class Lane:
         current_vehs.update(lanes_vehs[self.ID])
 
         dep_vehs = len(self.prev_vehs - current_vehs)
+        arr_vehs = len(current_vehs - self.prev_vehs)
         self.dep_vehs_num.append(dep_vehs)
-        self.arr_vehs_num.append(len(current_vehs) - (len(self.prev_vehs) - dep_vehs))        
+        self.arr_vehs_num.append(arr_vehs)        
         self.prev_vehs = current_vehs
 

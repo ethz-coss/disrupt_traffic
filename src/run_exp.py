@@ -32,9 +32,9 @@ for method in methods:
         
         for d in ds:
             if method == 'hybrid' or method == 'presslight':
-                os.system("sbatch -n 8 --wrap \"python traffic_sim.py --sim_config ../scenarios/" + path + '/' + d + ".config" + " --num_sim_steps 3600 --eps_start 0 --lr 0.0005 --mode test --num_episodes 1 --load " + model_path  + " --agents_type " + method + " --path " + results_path+"/"+d+ "_" + method + "\"")
+                os.system("sbatch -n 8 --wrap \"python traffic_sim.py --sim_config ../scenarios/" + path + '/' + d + ".config" + " --num_sim_steps 3600 --eps_start 0 --lr 0.0005 --mode test --replay True --num_episodes 1 --load " + model_path  + " --agents_type " + method + " --path " + results_path+"/"+d+ "_" + method + "\"")
             else:
-                os.system("sbatch -n 8 --wrap \"python traffic_sim.py --sim_config " + "../scenarios/" + path + '/' + d + ".config" + " --num_sim_steps 3600 --num_episodes 1 --agents_type " + method + " --path " + results_path+"/"+d+"_" + method + "\"")
+                os.system("sbatch -n 8 --wrap \"python traffic_sim.py --sim_config " + "../scenarios/" + path + '/' + d + ".config" + " --num_sim_steps 3600 --num_episodes 1  --replay True --agents_type " + method + " --path " + results_path+"/"+d+"_" + method + "\"")
 
 
 

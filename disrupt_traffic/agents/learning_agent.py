@@ -15,7 +15,7 @@ class Learning_Agent(Agent):
     The class defining an agent which controls the traffic lights using reinforcement learning approach called PressureLight
     """
 
-    def __init__(self, env, ID='', in_roads=[], out_roads=[], n_states=0, lr=None, batch_size=None):
+    def __init__(self, env, ID='', in_roads=[], out_roads=[], lr=None, batch_size=None):
         """
         initialises the Learning Agent
         :param ID: the unique ID of the agent corresponding to the ID of the intersection it represents 

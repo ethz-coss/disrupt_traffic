@@ -108,18 +108,11 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
             environ.eng.set_replay_file(args.path + "../replay_file.txt")
 
         print("episode ", i_episode)
-        done = False
 
         obs = environ.reset()
 
         while environ.time < num_sim_steps:
-            if environ.time >= num_sim_steps-1:
-                done = True
-
             # Dispatch the observations to the model to get the tuple of actions
-            # actions = {agent_id: policy_mapper[agent_id].act(obs_i)
-            #                     for agent_id, obs_i in obs}
-
             actions = environ.actions  # .copy()
             action_probs = environ.action_probs
             for agent_id, agent in environ._agents_dict.items():
@@ -144,7 +137,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
                 environ.detailed_log()
 
             # Update the model with the transitions observed by each agent
-            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15:
+            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15: 
                 for agent_id in rewards.keys():
                     if rewards[agent_id]:
                         state = torch.FloatTensor(obs[agent_id], device=device)
@@ -152,12 +145,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
                             [rewards[agent_id]], dtype=torch.float, device=device)
                         done = torch.tensor(
                             [dones[agent_id]], dtype=torch.bool, device=device)
-                        if args.rl_model == 'sac':
-                            action = torch.tensor(
-                                action_probs[agent_id], dtype=torch.float, device=device)
-                        else:
-                            action = torch.tensor(
-                                [actions[agent_id]], device=device)
+                        action = torch.tensor(
+                            [actions[agent_id]], device=device)
                         next_state = torch.FloatTensor(
                             next_obs[agent_id], device=device)
                         policy_mapper(agent_id).memory.add(
@@ -193,8 +182,13 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
             best_reward = logger.reward
             logger.save_models(policies, flag=None)
 
-        print(logger.reward, environ.eng.get_average_travel_time(),
-              environ.eng.get_finished_vehicle_count())
+        print_string = (f'Rew: {logger.reward:.4f}\t'
+                        f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
+                        f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
+                        )
+        if detailed_log:
+            print_string += f'MeanDelay (sec/km): {np.mean(logger.delays[-1])}'
+        print(print_string)
 
     logger.save_log_file(environ)
     logger.serialise_data(environ, policies[0])
@@ -218,9 +212,7 @@ if __name__ == "__main__":
         raise Exception(
             f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
 
-    n_actions = 9
-    environ = Environment(args, n_actions=n_actions,
-                          n_states=n_states, AgentClass=AgentClass)
+    environ = Environment(args, AgentClass=AgentClass)
 
     act_space = environ.action_space
     obs_space = environ.observation_space
@@ -229,10 +221,7 @@ if __name__ == "__main__":
         if args.agents_type == 'hybrid':
             policy = Hybrid(obs_space, act_space, seed=SEED, load=args.load)
         else:
-            if args.rl_model == 'sac':
-                policy = SAC(n_states, n_actions, seed=SEED, load=args.load)
-            else:
-                policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
+            policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
     else:
         print('not using a policy')
         policy = None
@@ -246,5 +235,3 @@ if __name__ == "__main__":
     detailed_log = args.mode == 'test'
     run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
 
-    # if args.mfd:
-    #     mfd_data = environ.get_mfd_data()

@@ -1,0 +1,6 @@
+geopandas==0.12.1
+gym==0.21
+torch>=1.13
+git+https://github.com/mbkorecki/CityFlow.git
+dill>=0.3
+pettingzoo==1.15

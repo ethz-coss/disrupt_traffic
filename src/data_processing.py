@@ -26,8 +26,9 @@ for pretrain in pretrained:
 
             
 paths = ['2x2', '4x4mount', 'hangzhou', 'ny48', 'ny48double', 'ny48triple']
-ds = ['1', 'dis1', 'dis2', 'dis3', 'dis4']
-methods = ['random', 'fixed', 'demand', 'analytical', 'presslight_load', 'hybrid_load']
+# ds = ['1', 'dis1', 'dis2', 'dis3', 'dis4']
+ds = ['dis1', 'dis2', 'dis3', 'dis4']
+methods = ['random', 'fixed', 'demand', 'analytical', 'presslight', 'hybrid']
 
 data_dict = {}
 for path in paths:
@@ -41,12 +42,19 @@ for path in paths:
                 if d == '1' and i > 0:
                     break
                 if d == '1':
-                    with open("../run_exp_" + path + '/' + d + "_" + method + "/logs.txt", "r") as log_file:
+                    with open(f"../run_exp_{path}_{method}/{path}/{d}" + "_" + method + "/logs.txt", "r") as log_file:
+                    # with open("../run_exp_" + path + '/' + d + "_" + method + "/logs.txt", "r") as log_file:
                         data = log_file.read().split("\n")
                         time = float(data[7].split(":")[1].split("with")[0])
                         avg_time.append(time)
                 else:
-                    with open("../run_exp_" + path + '/' + d + "_" + str(i) + "_" + method + "/logs.txt", "r") as log_file:
+                    load = ''
+                    if method in ['presslight', 'hybrid']:
+                        load = '_load'
+                    fp = f"../runs/run_exp_{path}_{method}/{path}{load}/{d}_{i}_{method}/logs.txt"
+                    if not os.path.exists(fp): continue
+                    with open(fp, "r") as log_file:
+                    # with open("../run_exp_" + path + '/' + d + "_" + str(i) + "_" + method + "/logs.txt", "r") as log_file:
                         data = log_file.read().split("\n")
                         time = float(data[7].split(":")[1].split("with")[0])
                         avg_time.append(time)
@@ -54,13 +62,13 @@ for path in paths:
             data_dict.update({(path, method, d) : (np.mean(avg_time), np.std(avg_time))})
     
 
-x_2x2names = ['0', '0.0625'] 
+x_2x2names = ['0.0625'] 
 
-paths = ['2x2', '4x4mount', 'hangzhou', 'ny48', 'ny48double', 'ny48triple']
+# paths = ['2x2', '4x4mount', 'hangzhou', 'ny48', 'ny48double', 'ny48triple']
 path_names = ['2x2', '4x4', 'Hangzhou', 'NY48', 'NY48 double', 'NY48 triple']
 
-ds = ['1', 'dis1', 'dis2', 'dis3', 'dis4']
-methods = ['random', 'fixed', 'demand', 'analytical', 'presslight_load', 'hybrid_load']
+# ds = ['1', 'dis1', 'dis2', 'dis3', 'dis4']
+# methods = ['random', 'fixed', 'demand', 'analytical', 'presslight_load', 'hybrid_load']
 names = ['random', 'fixed', 'demand', 'analytical+', 'presslight', 'hybrid']
 
 avg_times = []
@@ -78,7 +86,7 @@ for path, path_name in zip(paths, path_names):
     trans5 = ax.transData + ScaledTranslation(+5/72, 0, fig.dpi_scale_trans)
     trans6 = ax.transData + ScaledTranslation(+7.5/72, 0, fig.dpi_scale_trans)
     transforms = [trans1, trans2, trans3, trans4, trans5, trans6]
-    x_names = ['0', '0.0625', '0.125', '0.1875', '0.25']
+    x_names = ['0.0625', '0.125', '0.1875', '0.25']
 
     for method, color, line, marker, trans, name in zip(methods, colors, lines, markers, transforms, names):
         avg_times = []
@@ -116,3 +124,4 @@ for path, path_name in zip(paths, path_names):
     fig.set_size_inches(7.5, 2.5)
     plt.savefig(path+".pdf", format="pdf", bbox_inches="tight")
     
+

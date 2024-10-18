@@ -79,6 +79,8 @@ def parse_args():
                         help="path to the clusters and models to be loaded")
     parser.add_argument("--ID", default=None, type=int,
                         help="id used for naming")
+    parser.add_argument("--seed", default=SEED, type=int,
+                        help=f"seed for randomization, default={SEED}")
     parser.add_argument("--gamma", default=0.8, type=float,
                         help="gamma parameter for the DQN")
 
@@ -94,9 +96,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
     environ.best_epoch = 0
 
     environ.eng.set_save_replay(open=False)
-    environ.eng.set_random_seed(2)
-    random.seed(2)
-    np.random.seed(2)
+    environ.eng.set_random_seed(args.seed+2)
+    random.seed(args.seed+2)
+    np.random.seed(args.seed+2)
 
     log_phases = False
 
@@ -219,9 +221,9 @@ if __name__ == "__main__":
 
     if args.agents_type in ['learning', 'hybrid', 'presslight']:
         if args.agents_type == 'hybrid':
-            policy = Hybrid(obs_space, act_space, seed=SEED, load=args.load)
+            policy = Hybrid(obs_space, act_space, seed=args.seed+2, load=args.load)
         else:
-            policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
+            policy = DQN(obs_space, act_space, seed=args.seed+2, load=args.load)
     else:
         print('not using a policy')
         policy = None

@@ -1,3 +1,6 @@
+slurm*
+models/*
+pretrained_hybrid
 runs/*
 *.pickle
 *.dil1l

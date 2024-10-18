@@ -36,7 +36,7 @@ class Logger:
         exp_name = f"{os.path.splitext(config_file)[0]}_{args.agents_type}"
 
         if args.load != None or args.load_cluster != None:
-            scenario_name += "_load"
+            exp_name += "_load"
 
         self.log_path = os.path.join(args.path, scenario_name, exp_name)
         head, tail = os.path.split(self.log_path)

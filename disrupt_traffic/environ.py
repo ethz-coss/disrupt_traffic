@@ -41,7 +41,7 @@ class Environment(gym.Env):
         self.eps = self.eps_start
 
         self.time = 0
-        random.seed(2)
+        random.seed(args.seed+2)
 
         self.lane_vehs = self.eng.get_lane_vehicles()
         self.lanes_count = self.eng.get_lane_vehicle_count()
